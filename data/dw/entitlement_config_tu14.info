@@ -1,0 +1,228 @@
+version 7
+
+// Entitlement ID Ranges
+// 0 - 299 ???
+// 300 - 399 Clan Entitlements
+// 400 - 599 ???
+// 600 - 699 Clan War Entitlements
+// 700 - 799 Generic Elite Entitlements
+
+// Number of keys to read from the key archive
+keys_to_read 16
+
+// unlocks in game - type, key index, bit, name, payload...
+unlock 0 0 600		//clan wars demon_skull_p
+unlock 0 1 601		//clan wars dead_ninja_p
+unlock 0 2 602		//clan wars mummy_p
+unlock 0 3 603		//clan wars skull_bow_p
+unlock 0 4 604		//clan wars cyclops_skull_p
+unlock 0 5 605		//clan wars dead_gnome_p
+unlock 0 6 606		//clan wars gold_grill_p
+unlock 0 7 607		//clan wars pirate_skull_p
+unlock 0 8 608		//clan wars gargoyle_p
+unlock 0 9 609		//clan wars vulture_p
+unlock 0 10 610		//clan wars warrior_mask_p
+unlock 0 11 611		//clan wars yeti_p
+unlock 0 12 612		//clan wars dead_owl_p
+unlock 0 13 613		//clan wars money_bags_p
+unlock 0 14 614		//clan wars injured_octopus_p
+unlock 0 15 615		//clan wars hotdog_p
+unlock 0 16 616		//clan wars crab_p
+unlock 0 17 617		//clan wars angry_robot_p
+unlock 0 18 618		//clan wars triangle_dot_ret
+unlock 0 19 619		//clan wars gold_chain_emb
+unlock 0 20 620		//clan wars wing_emb
+unlock 0 21 621		//clan wars brass_knuck_emb
+unlock 0 22 622		//clan wars ninja_emb
+unlock 0 25 623		//clan wars reaper head
+unlock 0 26 624		//clan wars merc head
+unlock 0 27 625		//clan wars body
+unlock 0 28 460		//clan wars diamond division reticle
+unlock 0 29 401		//clan wars diamond division camo
+unlock 0 30 627		//clan wars diamond division assassin head
+unlock 0 31 626		//clan wars diamond division savage head
+unlock 0 32 628		//clan wars diamond division body
+
+unlock 3 0 700		//Download the mobile app
+unlock 3 1 701		//Founder Skull
+
+unlock 3 4 500		//NEVERSOFT
+unlock 3 3 501		//IW
+unlock 3 5 502		//RAVEN
+unlock 3 7 503		//HIGH_MOON
+unlock 3 6 504		//BEACHHEAD
+
+unlock 13 0 209		//monster beast patch
+unlock 13 2 210		//monster beast playercard
+unlock 13 1 211		//monster viper patch
+unlock 13 3 212		//monster viper playercard
+
+unlock 13 4 216		//riley / classic ghost head
+
+unlock 13 30 217	//watcher patch
+unlock 13 31 213	//federation patch
+unlock 13 32 215	//into the deep patch
+unlock 13 33 214	//no man's land patch
+
+//Platform Unlocks
+platform 200 255161 //team leader head
+platform 201 255161 //team leader playercard
+platform 202 255161 //team leader patch
+platform 403 255161 //team leader camo
+platform 451 255161 //team leader reticle
+
+platform 200 255160 //team leader head
+platform 201 255160 //team leader playercard
+platform 202 255160 //team leader patch
+platform 403 255160 //team leader camo
+platform 451 255160 //team leader reticle
+
+platform 206 255162 //insignia playercard
+platform 205 255162 //insignia patch
+
+platform 216 255165 //classic ghost character
+
+platform 213 255167 //federation patch
+platform 214 255168 //no mans land patch
+platform 215 255169 //into the deep patch
+
+platform 207 255163 //digital hardened patch
+platform 208 255163 //digital hardened playercard
+
+platform 217 255166 //Steam Patch - The Watcher
+
+platform 222 268100 //festive playercard
+platform 221 268100 //festive patch
+platform 410 268100 //festive camo
+platform 453 268100 //festive reticle
+
+platform 550 268101 //wolf
+
+platform 551 277670 //extra slots
+
+platform 552 277671 // hero character - elias
+platform 553 277672 // hero character - hesh
+platform 554 277673 // hero character - merrick
+platform 555 277674 // hero character - keegan
+platform 556 277675 // hero character - price
+
+platform 557 281343	// Hazmat character
+platform 558 281340	// Makarov Legend Pack
+platform 559 281342	// Rorke Character
+platform 560 281341	// Zakhaev Character
+
+platform 561 286632	// Soap Legend Pack
+platform 562 286633	// Extinction Squad
+platform 563 286634	// TF141
+
+platform 490 277676	// Personalization pack 1 - Ducky
+platform 491 277677	// Personalization pack 2 - Blood
+platform 492 277678	// Personalization pack 3 - Inferno
+platform 493 277679	// Personalization pack 4 - Kittens
+
+platform 494 281344	// Personalization pack 5
+platform 495 281345	// Personalization pack 6
+platform 496 281346	// Personalization pack 7
+platform 497 281347	// Personalization pack 8
+platform 498 286630	// Personalization pack 9
+platform 499 286631	// Personalization pack 10
+
+platform 510 295430	// Personalization pack 11
+platform 511 295431	// Personalization pack 12
+platform 512 295432	// Personalization pack 13
+platform 513 295433	// Personalization pack 14
+platform 515 295434	// Personalization pack 15
+platform 516 295435	// Personalization pack 16
+
+platform 517 295439	// Personalization pack 17
+platform 518 295440	// Personalization pack 18
+platform 519 301111	// Personalization pack 19
+platform 520 301112	// Personalization pack 20
+platform 521 301113	// Personalization pack 21
+platform 522 301114	// Personalization pack 22
+platform 523 301110	// Personalization pack Flags
+
+platform 564 295436	// Spectrum Character
+platform 565 295437	// Astronaut Character
+platform 566 295438	// Resistance Squad
+
+platform 567 309870	// Bluntforce Character
+platform 568 309871	// Inferno Character
+platform 569 309872	// Bling Character
+
+platform 480 259250 //dlc gun 1
+platform 480 301116 //dlc gun 1
+platform 481 259250 //dlc gun 1
+platform 481 301116 //dlc gun 1
+
+platform 482 259251 //Ripper from Devastation
+platform 482 255161 //Ripper from Season Pass
+platform 482 301115 //Ripper from mDLC
+
+//Clan Entitlements - ID 300 - 399 - type, bit, entitlement id
+clan 0 300
+clan 0 301
+clan 1 302
+clan 2 303
+clan 3 304
+clan 3 305
+clan 3 306
+clan 4 307
+clan 4 308
+clan 4 309
+clan 5 310
+clan 5 311
+clan 6 312
+clan 7 313
+clan 8 314
+clan 8 315
+clan 8 316
+clan 9 317
+clan 10 318
+clan 10 319
+clan 10 320
+clan 10 321
+clan 10 322
+clan 11 323
+clan 12 324
+clan 13 325
+clan 13 326
+clan 13 327
+clan 13 328
+clan 13 329
+clan 14 330
+clan 15 331
+clan 15 332
+clan 15 333
+clan 16 334
+clan 16 335
+clan 16 336
+clan 16 337
+clan 16 338
+clan 17 339
+clan 18 340
+clan 19 341
+clan 19 342
+clan 19 343
+clan 19 344
+clan 20 345
+clan 20 346
+clan 21 347
+clan 21 348
+clan 21 349
+clan 22 350
+clan 23 351
+clan 24 352
+clan 25 353
+clan 26 354
+clan 26 355
+clan 26 356
+clan 26 357
+clan 27 358
+
+//Clan Level Challenges - type, required level, challenge id
+clanlevelchallenge 23 ch_cam_clan_02	//  Kiss of Death Camo
+
+//Clan War Challenges - type, key index, bit offset, challenge id
+entitlementchallenge 0 18 ch_ret_clan		// clan wars reticle - Triad
+entitlementchallenge 0 24 ch_cam_clan_01	// clan wars camo - Body Count

@@ -1,0 +1,162 @@
+article  1
+header "FLAGS OF THE WORLD PACK"
+body "Show your national pride with individual patches, playercards, and backgrounds for England, France, Germany, Italy, Spain, Mexico, USA, Brazil, Australia, Japan, UK, Russia, Netherlands, Portugal, Colombia, Argentina, Canada, Ireland, and Sweden.
+
+Plus, go international in any firefight with a unique reticle and flags of the world weapon camo.
+
+Available now.
+
+Visit the in-game store to find out more."
+type item
+image ui_mp/ingamestore/img_store_pers_pack_flags.jpg
+imagewidth 320
+imageheight 160
+data mdlc_pack40
+localJPEGImage
+
+article  2
+header "CALL OF DUTY APP"
+body "The Call of Duty App is everything you need to keep track of your Ghosts experience on the go.
+
+Get unique info on Clan Wars: A brand new game mode that connects directly to Call of Duty®: Ghosts multiplayer, where clans compete against each other for additional XP and in-game content. 
+
+Communicate via the Rally Up and Clan Chat features, to keep in touch with your friends and Clan members."
+type news
+image img_sf_generic_news2
+imagewidth 320
+imageheight 320
+
+article  3
+header "PLAY HOW YOU WANT WITH EXTRA LOADOUT SLOTS"
+body "You can increase the number of loadout slots from 6 to 10, so you can take even more options into battle.  Never get caught with the wrong gear and give yourself great flexibility by creating different loadouts for different situations.
+
+Top Tip - Set up different characters for different game modes, that way you can select the right man for the job.
+
+Another Top Tip - With all the extra loadouts, set up variations of your favorite loadout so you’re always ready for the unexpected.
+
+Visit the in-game store to find out more."
+type item
+image ui_mp/ingamestore/img_store_extra_slots.jpg
+imagewidth 320
+imageheight 160
+data mdlc_pack2
+localJPEGImage
+
+article  4
+header "DROP ZONE IS BACK!"
+body "We are bringing this fan favorite mode from Call of Duty: Modern Warfare 3 to Call of Duty: Ghosts Multiplayer.
+
+Fight to take control of the Drop Zone marked with a red smoke grenade, a location where Care Packages are regularly delivered by air drops.
+
+This mode gives you multiple chances to change the game with awesome killstreaks like the Gryphon, Juggernaut, or the earth shattering Loki.
+
+Control the Drop Zone, collect killstreaks, and wreak havoc on the opposing team!"
+type news
+image img_squadmode_03
+imagewidth 320
+imageheight 176
+
+article  5
+header "THE REAL ORIGINS OF EXTINCTION"
+body "Find out the origins of the Extinction story by collecting hidden intel items in Episode 1: Nightfall. 
+
+Find out the real story of Dr. Cross, Archer and discover more secrets from Project Nightfall.
+
+Episode 1: Nightfall  is part of DLC 1: Onslaught, available now.
+
+Visit the in-game store to find out more."
+type item
+image bg_large_073
+imagewidth 320
+imageheight 320
+data dlc3
+
+article  6
+header "NEW CUSTOMIZATION CONTENT"
+body "New content is being released all the time.  Personalize your look and your loadout with customization items.
+
+- Special Characters: Customize your look head-to-toe in Multiplayer, Squads and Extinction. 
+
+- Personalization Packs: Uniquely themed weapon camo, reticle, patch, playercard and background.
+
+- Legend Packs: A Special Character and themed Personalization Pack for a legendary figure in Call of Duty lore.
+
+Visit the in-game store to find out more."
+type item
+image ui_mp/ingamestore/img_store_pers_pack_07.jpg
+imagewidth 320
+imageheight 160
+data mdlc_pack17
+localJPEGImage
+
+article  7
+header "NEW TO EXTINCTION - THE ARMORY"
+body "Spend Teeth in the Armory to purchase upgrades for classes and equipment. 
+
+Earn Teeth by completing Extinction missions. Bonus Teeth are awarded for completing with a relic, completing in Hardcore mode, or helping other players complete a mission for the first time.
+
+You can also earn teeth by killing aliens in both Extinction and Chaos Mode.
+ 
+Upgrades include the Weapon Specialist's Infinite Ammo Ability and the Medic's Energy Field, instantly heal and revive anyone within its perimeter!"
+type news
+image img_sf_extinction_armory
+imagewidth 320
+imageheight 320
+
+article  8
+header "CAN YOU SURVIVE THE CHAOS?"
+body "Extinction's Chaos Mode is an all-new, adrenaline pumping game type that pits 1-4 players against a never ending alien onslaught.
+
+Keep the combo meter filled by damaging aliens, collecting weaponry or upgrades, and making use of your abilities. Combos provide players with an ever-expanding set of perks such as Fast Health Regen, Gas Mask, and Stopping Power. 
+
+Special bonus drops provide new ability upgrades including the Tank Class Skill and the Venom-X that further your arsenal and overall score potential.
+
+The aliens are ready, are you?"
+type news
+image img_sf_extinction_chaos
+imagewidth 320
+imageheight 320
+
+article  9
+header "WHAT'S GOING ON WITH YOUR CLAN?"
+body "Check out what your Clan is up to in-game via Clan Details inside the Barracks. See what's going on with other players' Clans by checking out View Clan when you select them in the lobby.
+
+Get even more details on your Clan via the Call of Duty App, available now on the App Store, Google Play and Windows Store.
+
+Not in a Clan? Create one now via the Barracks and invite your friends straight from the game."
+type news
+image img_squadmode_02
+imagewidth 320
+imageheight 176
+
+article  10
+header "DRILL INSTRUCTOR VOICE PACK"
+body "Multiplayer returns to boot camp with the all-new Drill Instructor Voice Pack voiced by the one and only R. Lee Ermey, aka The Gunny.  
+
+Swap out your in-game alerts with ones that will get you back into top combat shape. 
+
+Now, drop down and give me twenty!
+
+Available now.
+
+Visit the in-game store to find out more."
+type item
+image ui_mp/ingamestore/img_store_drill_sergeant.jpg
+imagewidth 320
+imageheight 160
+data dlc10
+localJPEGImage
+
+article  11
+header "TRY REINFORCE"
+body "Reinforce is a new game mode where you annihilate the enemy team or capture points to win a match.
+
+You only respawn if a teammate captures a point, so be careful out there!
+
+This new game mode is now live in our Multiplayer playlist.
+
+Enjoy!"
+type news
+image bg_large_045
+imagewidth 320
+imageheight 320
