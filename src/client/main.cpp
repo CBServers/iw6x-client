@@ -7,6 +7,8 @@
 #include <utils/flags.hpp>
 #include <utils/io.hpp>
 
+#include "component/updater.hpp"
+
 DECLSPEC_NORETURN void WINAPI exit_hook(const int code)
 {
 	component_loader::pre_destroy();
@@ -204,6 +206,7 @@ int main()
 		{
 			apply_environment();
 			remove_crash_file();
+			updater::update();
 
 			if (!component_loader::post_start()) return 0;
 

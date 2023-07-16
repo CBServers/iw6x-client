@@ -25,6 +25,8 @@ namespace filesystem
 	void register_path(const std::filesystem::path& path);
 	void unregister_path(const std::filesystem::path& path);
 
+	std::string get_binary_directory();
+
 	std::vector<std::string> get_search_paths();
 	std::vector<std::string> get_search_paths_rev();
 }
