@@ -104,7 +104,7 @@ FARPROC load_binary(const launcher::mode mode)
 	if (!utils::io::read_file(binary, &data))
 	{
 		throw std::runtime_error(
-			"Failed to read game binary! Please select the correct path in the launcher settings.");
+			"Failed to read game binary! Please make sure you have iw6x.exe in your Ghosts installation folder.");
 	}
 
 #ifdef INJECT_HOST_AS_LIB
@@ -181,6 +181,15 @@ void apply_environment()
 	SetDllDirectoryA(buffer);
 }
 
+void check_if_has_iw6()
+{
+	if (!utils::io::file_exists("iw6sp64_ship.exe") && !utils::io::file_exists("iw6mp64_ship.exe"))
+	{
+		throw std::runtime_error(
+			"Can't find a valid iw6sp64_ship.exe or iw6mp64_ship.exe. Make sure you put iw6x.exe in your Ghosts installation folder.");
+	}
+}
+
 int main()
 {
 	FARPROC entry_point;
@@ -205,6 +214,7 @@ int main()
 		try
 		{
 			apply_environment();
+			check_if_has_iw6();
 			remove_crash_file();
 			updater::update();
 

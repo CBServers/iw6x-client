@@ -150,69 +150,6 @@ namespace notifies
 			scr_player_damage_hook.invoke<void>(self, inflictor, attacker, damage, dflags, means_of_death, weapon, is_alternate, v_point, v_dir, hit_loc, time_offset);
 		}
 
-		void client_command_stub(const int client_num)
-		{
-			if (game::mp::g_entities[client_num].client == nullptr)
-			{
-				return;
-			}
-
-			command::params_sv params;
-
-			if (params[0] == "say"s || params[0] == "say_team"s)
-			{
-				std::string message(game::ConcatArgs(1));
-
-				auto msg_index = 0;
-				if (message[msg_index] == '\x1F')
-				{
-					msg_index = 1;
-				}
-
-				auto hidden = false;
-				if (message[msg_index] == '/')
-				{
-					hidden = true;
-
-					if (msg_index == 1)
-					{
-						// Overwrite / with \x1F only if present
-						message[msg_index] = message[msg_index - 1];
-					}
-					// Skip over the first character
-					message.erase(message.begin());
-				}
-
-				scheduler::once([params, message, msg_index, client_num]
-				{
-					const scripting::entity level{*game::levelEntityId};
-					const auto player = scripting::call("getentbynum", {client_num}).as<scripting::entity>();
-					// Remove \x1F before sending the notify only if present
-					const auto notify_msg = msg_index ? message.substr(1) : message;
-
-					notify(level, params[0], {player, notify_msg});
-					notify(player, params[0], {notify_msg});
-
-					game_log::g_log_printf("%s;%s;%i;%s;%s\n",
-						params[0],
-						player.call("getguid").as<const char*>(),
-						client_num,
-						player.get("name").as<const char*>(),
-						message.data()
-					);
-
-				}, scheduler::pipeline::server);
-
-				if (hidden)
-				{
-					return;
-				}
-			}
-
-			// ClientCommand
-			utils::hook::invoke<void>(0x1403929B0, client_num);
-		}
-
 		unsigned int local_id_to_entity(unsigned int local_id)
 		{
 			const auto variable = game::scr_VarGlob->objectVariableValue[local_id];
@@ -294,6 +231,63 @@ namespace notifies
 		}
 	}
 
+	bool client_command_stub(const int client_num)
+	{
+		command::params_sv params;
+
+		if (params[0] == "say"s || params[0] == "say_team"s)
+		{
+			std::string message(game::ConcatArgs(1));
+
+			auto msg_index = 0;
+			if (message[msg_index] == '\x1F')
+			{
+				msg_index = 1;
+			}
+
+			auto hidden = false;
+			if (message[msg_index] == '/')
+			{
+				hidden = true;
+
+				if (msg_index == 1)
+				{
+					// Overwrite / with \x1F only if present
+					message[msg_index] = message[msg_index - 1];
+				}
+				// Skip over the first character
+				message.erase(message.begin());
+			}
+
+			scheduler::once([params, message, msg_index, client_num]
+			{
+				const scripting::entity level{ *game::levelEntityId };
+				const auto player = scripting::call("getentbynum", { client_num }).as<scripting::entity>();
+				// Remove \x1F before sending the notify only if present
+				const auto notify_msg = msg_index ? message.substr(1) : message;
+
+				notify(level, params[0], { player, notify_msg });
+				notify(player, params[0], { notify_msg });
+
+				game_log::g_log_printf("%s;%s;%i;%s;%s\n",
+					params[0],
+					player.call("getguid").as<const char*>(),
+					client_num,
+					player.get("name").as<const char*>(),
+					message.data()
+				);
+
+			}, scheduler::pipeline::server);
+
+			if (hidden)
+			{
+				return false;
+			}
+		}
+
+		return true;
+	}
+
 	void add_player_damage_callback(const sol::protected_function& callback)
 	{
 		player_damage_callbacks.push_back(callback);
@@ -356,8 +350,6 @@ namespace notifies
 			{
 				return;
 			}
-
-			utils::hook::call(0x1404724DD, client_command_stub);
 
 			scr_player_damage_hook.create(0x1403CE0C0, scr_player_damage_stub);
 			scr_player_killed_hook.create(0x1403CE260, scr_player_killed_stub);
