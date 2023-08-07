@@ -2408,7 +2408,7 @@ namespace game
 
 	struct pmove_t
 	{
-		playerState_s* ps;
+		mp::playerState_s* ps;
 		usercmd_s cmd;
 		usercmd_s oldcmd;
 		int tracemask;

@@ -10,44 +10,55 @@ namespace mechanics
 {
 	namespace
 	{
-		utils::hook::detour pm_weap_beginweapraise_hook;
-		utils::hook::detour pm_weaponprocesshand_hook;
+		utils::hook::detour PM_BeginWeaponChange_hook;
+		utils::hook::detour PM_Weapon_CheckForChangeWeapon_hook;
 		game::dvar_t* pm_improvedMechanics;
 
-		void PM_Weapon_BeginWeaponRaise(game::mp::playerState_s** ps_, unsigned int orr, unsigned int p2, unsigned int p4, unsigned int p5, game::PlayerHandIndex handIdx)
+		//mw2 mechanics thanks to @plugwalker47
+		void PM_BeginWeaponChange_stub(game::pmove_t* pm, const game::Weapon newweapon, bool isNewAlternate, bool quick, unsigned int* holdrand)
 		{
-			if (pm_improvedMechanics->current.enabled)
+			int anim = pm->ps->weapState[0x0].weapAnim;
+			int anim2 = pm->ps->weapState[0x1].weapAnim;
+			bool keepanim;
+			if ((pm->cmd.buttons & 3) != 0)
+				keepanim = true;
+			else
+				keepanim = false;
+
+			PM_BeginWeaponChange_hook.invoke<void>(pm, newweapon, isNewAlternate, quick, holdrand);
+
+			if (pm_improvedMechanics->current.enabled && keepanim)
 			{
-				if (orr != 0x12 && orr != 0x13)
-				{
-					if (orr == 0x1B && p4 == 0x3)
-					{
-						orr = 0x13;
-					}
-					else
-					{
-						orr = 0x01;
-					}
-				}
+				pm->ps->weapState[0x0].weapAnim = anim;
+				pm->ps->weapState[0x1].weapAnim = anim2;
 			}
-			
-			pm_weap_beginweapraise_hook.invoke<void>(ps_, orr , p2, p4, p5, handIdx);
 		}
 
-		void PM_WeaponProcessHand(game::mp::playerState_s** ps_, long long p2, unsigned int p3, game::PlayerHandIndex handIdx) 
+		void PM_Weapon_CheckForChangeWeapon_stub(game::pmove_t* pm, unsigned int* holdrand)
 		{
-			pm_weaponprocesshand_hook.invoke<void>(ps_, p2, p3, handIdx);
-
-			if (pm_improvedMechanics->current.enabled)
+			if (pm_improvedMechanics->current.enabled && pm->ps->weapon == pm->cmd.weapon && (unsigned int)(pm->ps->weapState[0x0].weaponState - 3) <= 2 && game::PM_Weapon_InValidChangeWeaponState(pm) && pm->ps->weapFlags != 128 && pm->ps->pm_flags != 8 && pm->ps->pm_flags != 40)
 			{
-				auto* ps = *ps_;
-				// YY cancel -> shoot
-				if (ps->weapState[handIdx].weaponState == 0x1 || ps->weapState[handIdx].weaponState == 0x2 || ps->weapState[handIdx].weaponState == 0x5)
-				{
-					ps->weapState[handIdx].weaponState = 0x0;
-					ps->weapState[handIdx].weaponTime = 0x0;
-				}
-			}	
+				if (pm->ps->weapState[0x0].weapAnim == 30 || pm->ps->weapState[0x0].weapAnim == 2078)
+					pm->ps->weapState[0x0].weapAnim = 31;
+				else
+					pm->ps->weapState[0x0].weapAnim = 1;
+				if (pm->ps->weapState[0x1].weapAnim == 30 || pm->ps->weapState[0x1].weapAnim == 2078)
+					pm->ps->weapState[0x1].weapAnim = 31;
+				else
+					pm->ps->weapState[0x1].weapAnim = 1;
+				pm->ps->weapState[0x0].weaponState = 0;
+				pm->ps->weapState[0x1].weaponState = 0;
+				pm->ps->weapState[0x0].weaponDelay = 0;
+				pm->ps->weapState[0x1].weaponDelay = 0;
+				pm->ps->weapState[0x0].weaponTime = 0;
+				pm->ps->weapState[0x1].weaponTime = 0;
+				pm->ps->weapState[0x0].weaponRestrictKickTime = 0;
+				pm->ps->weapState[0x1].weaponRestrictKickTime = 0;
+				game::BG_ClearDropWeaponAnim(pm->ps);
+				return;
+			}
+
+			PM_Weapon_CheckForChangeWeapon_hook.invoke<void>(pm, holdrand);
 		}
 	}
 
@@ -61,10 +72,10 @@ namespace mechanics
 				return;
 			}
 
-			pm_weap_beginweapraise_hook.create(0x140231500, &PM_Weapon_BeginWeaponRaise);
-			pm_weaponprocesshand_hook.create(0x140230be0, &PM_WeaponProcessHand);
+			PM_BeginWeaponChange_hook.create(0x14022E9D0, &PM_BeginWeaponChange_stub);
+			PM_Weapon_CheckForChangeWeapon_hook.create(0x140231830, &PM_Weapon_CheckForChangeWeapon_stub);
 			pm_improvedMechanics = game::Dvar_RegisterBool("pm_improvedMechanics", true,
-				game::DVAR_FLAG_SAVED, "Enable improved YY mechanics");
+				game::DVAR_FLAG_SAVED, "Enable MW2 mechanics");
 		}
 	};
 }

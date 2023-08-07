@@ -101,6 +101,9 @@ namespace game
 	                          const char* errormsg)> G_FindConfigstringIndex{0x0, 0x140161F90};
 	WEAK symbol<int(int server_time)> G_RunFrame{0x0, 0x1403A05E0};
 
+	WEAK symbol<bool(game::pmove_t* pm)> PM_Weapon_InValidChangeWeaponState{0x0, 0x140233E20};
+	WEAK symbol<void(mp::playerState_s* ps)> BG_ClearDropWeaponAnim{0x0, 0x14020B500};
+
 	WEAK symbol<game_hudelem_s*(int clientNum, int teamNum)> HudElem_Alloc{0x0, 0x1403997E0};
 
 	WEAK symbol<char*(char* string)> I_CleanStr{0x140432460, 0x1404F63C0};
