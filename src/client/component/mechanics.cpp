@@ -75,7 +75,7 @@ namespace mechanics
 			PM_BeginWeaponChange_hook.create(0x14022E9D0, &PM_BeginWeaponChange_stub);
 			PM_Weapon_CheckForChangeWeapon_hook.create(0x140231830, &PM_Weapon_CheckForChangeWeapon_stub);
 			pm_improvedMechanics = game::Dvar_RegisterBool("pm_improvedMechanics", true,
-				game::DVAR_FLAG_SAVED, "Enable MW2 mechanics");
+				game::DVAR_FLAG_NONE, "Enable MW2 mechanics");
 		}
 	};
 }
