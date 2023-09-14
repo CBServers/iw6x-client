@@ -334,6 +334,8 @@ namespace stats
 
 				game::LiveStorage_PlayerDataSetReservedInt(
 					persistent_data_buffer, first_param, value, 0, statsgroup);
+
+				game::LiveStorage_StatsWriteNeeded(controller_index);
 			});
 
 			command::add("getReservedPlayerDataInt", [](const command::params& params)
