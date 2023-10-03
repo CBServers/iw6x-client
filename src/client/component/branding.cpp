@@ -15,6 +15,7 @@ namespace branding
 	namespace
 	{
 		utils::hook::detour ui_get_formatted_build_number_hook;
+		game::dvar_t* ui_showBranding;
 
 		void dvar_set_string_stub(game::dvar_t* dvar, const char* string)
 		{
@@ -72,8 +73,13 @@ namespace branding
 			ui_get_formatted_build_number_hook.create(
 				SELECT_VALUE(0x140415FD0, 0x1404D7C00), ui_get_formatted_build_number_stub);
 
+			ui_showBranding = game::Dvar_RegisterBool("ui_showBranding", false,
+				game::DVAR_FLAG_NONE, "Show IW6x branding at the top left");
+
 			scheduler::loop([]()
 			{
+				if (!ui_showBranding->current.enabled) return;
+
 				const auto x = 3;
 				const auto y = 0;
 				const auto scale = 0.5f;

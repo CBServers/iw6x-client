@@ -192,11 +192,11 @@ package.loaded["LUI.mp_menus.MPXboxLiveMenu"].XboxLiveOptionsFeeder = function( 
 	local f29_local3 = {}
 	local f29_local4 = nil
 	if f29_local0 then
-		f29_local4 = Engine.Localize( "@LUA_MENU_STORE_CAPS" ) -- Orginally @LUA_MENU_PUBLIC_MATCH_CAPS but we need to use @LUA_MENU_STORE_CAPS
+		f29_local4 = Engine.Localize( "@LUA_MENU_STORE_CAPS" )
 	elseif f29_local1 then
 		f29_local4 = Engine.Localize( "@PLATFORM_FIND_GAME_CAPS" )
 	else
-		f29_local4 = Engine.Localize( "@LUA_MENU_STORE_CAPS" ) -- Orginally @PLATFORM_FIND_GAME_CAPS but we need to use @LUA_MENU_STORE_CAPS
+		f29_local4 = Engine.Localize( "@LUA_MENU_STORE_CAPS" )
 	end
 	f29_local3[#f29_local3 + 1] = {
 		type = "UIGenericButton",
@@ -205,7 +205,7 @@ package.loaded["LUI.mp_menus.MPXboxLiveMenu"].XboxLiveOptionsFeeder = function( 
 		properties = {
 			button_text = f29_local4,
 			button_action_func = FindMatchAction,
-			desc_text = SvS.IsSvS() and Engine.Localize( "@LUA_MENU_SQUADS_FIND_MATCH_DESC" ) or Engine.Localize( "@LUA_MENU_STORE_DESC" ), -- Orginally @PLATFORM_DESC_FIND_GAME but we need to use @LUA_MENU_STORE_DESC
+			desc_text = SvS.IsSvS() and Engine.Localize( "@LUA_MENU_SQUADS_FIND_MATCH_DESC" ) or Engine.Localize( "@LUA_MENU_STORE_DESC" ),
 			disabledFunc = LUI.mp_menus.MPXboxLiveMenu.disableCreateGameButtons,
 			additional_handlers = {
 				check_buttons = LUI.mp_menus.MPLivePrivateLobby.RefreshButtonDisable
@@ -479,17 +479,16 @@ function FindMatchAfterThrottleEvent( f4_arg0, f4_arg1 )
 				end
 				LUI.FlowManager.RequestAddMenu( f4_arg0, "menu_xboxlive_lobby", false, f4_arg1.controller, false )
 			else
-				LUI.FlowManager.RequestPopupMenu( f4_arg0, "menu_systemlink_join" ) -- open server list instead of playlist_main
+				LUI.FlowManager.RequestPopupMenu( f4_arg0, "menu_systemlink_join" )
 			end
 		end
 	end
 end
 
 function BarracksAction( f9_arg0, f9_arg1 )
-	LUI.FlowManager.RequestAddMenu( f9_arg0, "menu_stats", true, f9_arg1.controller ) -- custom stats menu
+	LUI.FlowManager.RequestAddMenu( f9_arg0, "menu_stats", true, f9_arg1.controller )
 end
 
--- Remove social button
 LUI.MenuBuilder.m_definitions["online_friends_widget"] = function()
 	return {
 		type = "UIElement"
