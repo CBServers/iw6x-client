@@ -32,12 +32,6 @@
 [submodule "deps/discord-rpc"]
 	path = deps/discord-rpc
 	url = https://github.com/discord/discord-rpc.git
-[submodule "deps/sol2"]
-	path = deps/sol2
-	url = https://github.com/ThePhD/sol2.git
-[submodule "deps/lua"]
-	path = deps/lua
-	url = https://github.com/lua/lua.git
 [submodule "deps/WinToast"]
 	path = deps/WinToast
 	url = https://github.com/mohabouje/WinToast.git

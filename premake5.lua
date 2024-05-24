@@ -77,6 +77,11 @@ newoption {
 	description = "Enable development builds of the client."
 }
 
+newoption {
+	trigger = "steam-overlay",
+	description = "Enable the Steam Overlay."
+}
+
 newaction {
 	trigger = "version",
 	description = "Returns the version string for the current commit of the source code.",
@@ -241,7 +246,11 @@ warnings "Extra"
 characterset "ASCII"
 
 if _OPTIONS["dev-build"] then
-	defines {"DEV_BUILD"}
+	defines "DEV_BUILD"
+end
+
+if _OPTIONS["steam-overlay"] then
+	defines "LOAD_STEAM_OVERLAY"
 end
 
 if os.getenv("CI") then
@@ -290,7 +299,7 @@ includedirs {"./src/runner", "./src/common", "%{prj.location}/src"}
 resincludedirs {"$(ProjectDir)src"}
 
 project "client"
-kind "ConsoleApp"
+kind "WindowedApp"
 language "C++"
 
 targetname "iw6x"
