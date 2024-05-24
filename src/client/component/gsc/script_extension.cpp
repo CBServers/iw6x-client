@@ -368,7 +368,7 @@ namespace gsc
 			{
 				const auto* path = game::Scr_GetString(0);
 				const auto converted_path = convert_path(path);
-				game::Scr_AddInt(utils::io::file_size(converted_path));
+				game::Scr_AddInt(static_cast<uint32_t>(utils::io::file_size(converted_path)));
 			});
 
 			add_function("createdirectory", []
