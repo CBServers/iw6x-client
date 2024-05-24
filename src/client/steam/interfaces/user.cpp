@@ -135,13 +135,12 @@ namespace steam
 
 		auth_ticket = "IW6x";
 		auth_ticket.resize(32);
-		auth_ticket.append(reinterpret_cast<char*>(pUserData), cbUserData);
+		auth_ticket.append(static_cast<char*>(pUserData), cbUserData);
 		auth_ticket.append(reinterpret_cast<const char*>(&id.bits), sizeof(id.bits));
 
 		// Create the call response
 		const auto result = callbacks::register_call();
 		auto retvals = static_cast<encrypted_app_ticket_response*>(calloc(1, sizeof(encrypted_app_ticket_response)));
-		//::Utils::Memory::AllocateArray<EncryptedAppTicketResponse>();
 		retvals->m_e_result = 1;
 
 		// Return the call response

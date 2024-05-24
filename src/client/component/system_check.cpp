@@ -88,9 +88,9 @@ namespace system_check
 
 			if (!is_valid())
 			{
-				MessageBoxA(nullptr, "Your game files are outdated or unsupported.\n"
-				            "Please get the latest officially supported Call of Duty: Ghosts files, or you will get random crashes and issues.",
-				            "Invalid game files!", MB_ICONINFORMATION);
+				game::show_error("Your game files are outdated or unsupported.\n"
+				                 "Please get the latest officially supported Call of Duty: Ghosts files, or you will get random crashes and issues.",
+				                 "Invalid game files!");
 			}
 		}
 	};

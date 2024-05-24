@@ -3,8 +3,9 @@
 #include "game/game.hpp"
 
 #include "command.hpp"
-#include "network.hpp"
 #include "console.hpp"
+#include "network.hpp"
+#include "party.hpp"
 
 #include <utils/hook.hpp>
 #include <utils/string.hpp>
@@ -87,13 +88,17 @@ namespace network
 			return net_compare_base_address(a1, a2) && a1->port == a2->port;
 		}
 
-		void reconnect_migratated_client(game::mp::client_t*, game::netadr_s* from, const int, const int, const char*,
-		                                 const char*, bool)
+		void reconnect_migrated_client(game::mp::client_t*, game::netadr_s* from, const int, const int, const char*, const char*, bool)
 		{
 			// This happens when a client tries to rejoin after being recently disconnected, OR by a duplicated guid
 			// We don't want this to do anything. It decides to crash seemingly randomly
 			// Rather than try and let the player in, just tell them they are a duplicate player and reject connection
 			game::NET_OutOfBandPrint(game::NS_SERVER, from, "error\nYou are already connected to the server.");
+		}
+
+		void* memmove_stub(void* dest, const void* src, std::size_t count)
+		{
+			return std::memmove(dest, src, std::min<std::size_t>(count, 1262));
 		}
 	}
 
@@ -138,21 +143,21 @@ namespace network
 
 	const char* net_adr_to_string(const game::netadr_s& a)
 	{
-		if (a.type == game::netadrtype_t::NA_LOOPBACK)
+		if (a.type == game::NA_LOOPBACK)
 		{
 			return "loopback";
 		}
 
-		if (a.type == game::netadrtype_t::NA_BOT)
+		if (a.type == game::NA_BOT)
 		{
 			return "bot";
 		}
 
-		if (a.type == game::netadrtype_t::NA_IP || a.type == game::netadrtype_t::NA_BROADCAST)
+		if (a.type == game::NA_IP || a.type == game::NA_BROADCAST)
 		{
 			if (a.port)
 			{
-				return utils::string::va("%u.%u.%u.%u:%u", a.ip[0], a.ip[1], a.ip[2], a.ip[3], htons(a.port));
+				return utils::string::va("%u.%u.%u.%u:%u", a.ip[0], a.ip[1], a.ip[2], a.ip[3], ::htons(a.port));
 			}
 
 			return utils::string::va("%u.%u.%u.%u", a.ip[0], a.ip[1], a.ip[2], a.ip[3]);
@@ -189,10 +194,9 @@ namespace network
 		a.jmp(0x14041DFBD);
 	}
 
-	game::dvar_t* register_netport_stub(const char* dvarName, int value, int min, int max, unsigned int flags,
-		const char* description)
+	game::dvar_t* register_netport_stub(const char* dvarName, int value, int min, int max, unsigned int flags, const char* description)
 	{
-		auto dvar = game::Dvar_RegisterInt("net_port", 27016, 0, 0xFFFFu, game::DVAR_FLAG_LATCHED, "Network port");
+		auto* dvar = game::Dvar_RegisterInt("net_port", 27016, 0, std::numeric_limits<uint16_t>::max(), game::DVAR_FLAG_LATCHED, "Network port");
 
 		// read net_port from command line
 		command::read_startup_variable("net_port");
@@ -221,13 +225,13 @@ namespace network
 				utils::hook::jump(0x14041DFB0, utils::hook::assemble(set_xuid_config_string_stub), true);
 
 				utils::hook::jump(0x14041D010, net_compare_address);
-				utils::hook::jump(0x14041D060, net_compare_base_address);
+				utils::hook::jump(0x14041D060, net_compare_address);
 
 				// don't establish secure conenction
 				utils::hook::set<uint8_t>(0x1402ECF1D, 0xEB);
 				utils::hook::set<uint8_t>(0x1402ED02A, 0xEB);
 				utils::hook::set<uint8_t>(0x1402ED34D, 0xEB);
-				utils::hook::set<uint8_t>(0x1402C4A1F, 0xEB); //
+				utils::hook::set<uint8_t>(0x1402C4A1F, 0xEB);
 
 				// ignore unregistered connection
 				utils::hook::jump(0x140471AAC, reinterpret_cast<void*>(0x140471A50));
@@ -272,17 +276,31 @@ namespace network
 				utils::hook::jump(0x1405019CB, 0x1405019F3);
 
 				// don't try to reconnect client
-				utils::hook::call(0x14047197E, reconnect_migratated_client);
+				utils::hook::call(0x14047197E, reconnect_migrated_client);
 
 				// allow server owner to modify net_port before the socket bind
 				utils::hook::call(0x140500FD0, register_netport_stub);
 
-				// ignore built in "print" oob command and add in our own
+				// ignore built in "print" oob command for security reasons
 				utils::hook::set<std::uint8_t>(0x1402C6AA4, 0xEB);
-				on("print", [](const game::netadr_s&, const std::string& data)
+				if (!game::environment::is_dedi())
 				{
-					console::info("%s", data.data());
-				});
+					// we need this on the client for RCon
+					on("print", [](const game::netadr_s& address, const std::string& message)
+					{
+						if (address != party::get_target())
+						{
+							return;
+						}
+
+						console::info("%s", message.data());
+					});
+				}
+
+				// patch buffer overflow
+				utils::hook::call(0x14041D17E, memmove_stub); // NET_DeferPacketToClient
+				// this patches a crash found in a subroutine registered using atexit
+				utils::hook::set<std::uint8_t>(0x140815D4E, 0xEB);
 			}
 		}
 	};

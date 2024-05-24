@@ -1,5 +1,15 @@
 init()
 {
+	if (maps\mp\_utility::is_aliens())
+	{
+		return;
+	}
+
+	if (isdefined(level.ishorde) && level.ishorde)
+	{
+		return;
+	}
+
 	// define onteamselection callback function used in balanceteams()
 	level.onteamselection = ::set_team;
 }

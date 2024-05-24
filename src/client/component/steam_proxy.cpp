@@ -1,10 +1,8 @@
 #include <std_include.hpp>
 #include "loader/component_loader.hpp"
-#include "steam_proxy.hpp"
 #include "scheduler.hpp"
 
 #include <utils/nt.hpp>
-#include <utils/flags.hpp>
 #include <utils/string.hpp>
 #include <utils/binary_resource.hpp>
 
@@ -17,13 +15,17 @@ namespace steam_proxy
 {
 	namespace
 	{
-		utils::binary_resource runner_file(RUNNER, "runner.exe");
-
-		bool is_disabled()
+		enum class ownership_state
 		{
-			static const auto disabled = utils::flags::has_flag("no-steam");
-			return disabled;
-		}
+			success,
+			unowned,
+			nosteam,
+			error,
+		};
+
+		ownership_state state_;
+
+		utils::binary_resource runner_file(RUNNER, "runner.exe");
 	}
 
 	class component final : public component_interface
@@ -31,7 +33,7 @@ namespace steam_proxy
 	public:
 		void post_load() override
 		{
-			if (game::environment::is_dedi() ||game::environment::is_linker() || is_disabled())
+			if (game::environment::is_dedi())
 			{
 				return;
 			}
@@ -40,16 +42,18 @@ namespace steam_proxy
 			this->clean_up_on_error();
 
 #ifndef DEV_BUILD
-	try
-	{
-		this->start_mod("\xF0\x9F\x91\xBB" " IW6x: "s + (game::environment::is_sp() ? "Singleplayer" : "Multiplayer"),
-		                game::environment::is_sp() ? 209160 : 209170);
-	}
-	catch (std::exception& e)
-	{
-		printf("Steam: %s\n", e.what());
-	}
+			try
+			{
+				const std::string game_type = game::environment::is_sp() ? "singleplayer" : "multiplayer";
+				state_ = this->start_mod("\xF0\x9F\x91\xBB" " IW6x: " + (game_type), game::environment::is_sp() ? 209160 : 209170);
+			}
+			catch (const std::exception& ex)
+			{
+				state_ = ownership_state::error;
+				printf("Steam: %s\n", ex.what());
+			}
 #endif
+			(void)state_;
 		}
 
 		void pre_destroy() override
@@ -60,8 +64,7 @@ namespace steam_proxy
 				{
 					if (this->global_user_)
 					{
-						this->steam_client_module_.invoke<void>("Steam_ReleaseUser", this->steam_pipe_,
-						                                        this->global_user_);
+						this->steam_client_module_.invoke<void>("Steam_ReleaseUser", this->steam_pipe_, this->global_user_);
 					}
 
 					this->steam_client_module_.invoke<bool>("Steam_BReleaseSteamPipe", this->steam_pipe_);
@@ -69,14 +72,18 @@ namespace steam_proxy
 			}
 		}
 
-		const utils::nt::library& get_overlay_module() const
+#ifdef LOAD_STEAM_OVERLAY
+		[[nodiscard]] const utils::nt::library& get_overlay_module() const
 		{
 			return steam_overlay_module_;
 		}
+#endif
 
 	private:
 		utils::nt::library steam_client_module_{};
+#ifdef LOAD_STEAM_OVERLAY
 		utils::nt::library steam_overlay_module_{};
+#endif
 
 		steam::interface client_engine_{};
 		steam::interface client_user_{};
@@ -85,15 +92,14 @@ namespace steam_proxy
 		void* steam_pipe_ = nullptr;
 		void* global_user_ = nullptr;
 
-		void* load_client_engine() const
+		[[nodiscard]] void* load_client_engine() const
 		{
 			if (!this->steam_client_module_) return nullptr;
 
-			for (auto i = 1; i > 0; ++i)
+			for (auto i = 1; i < 1000; ++i)
 			{
-				std::string name = utils::string::va("CLIENTENGINE_INTERFACE_VERSION%03i", i);
-				auto* const client_engine = this->steam_client_module_
-				                                .invoke<void*>("CreateInterface", name.data(), nullptr);
+				const auto* name = utils::string::va("CLIENTENGINE_INTERFACE_VERSION%03i", i);
+				auto* const client_engine = this->steam_client_module_.invoke<void*>("CreateInterface", name, nullptr);
 				if (client_engine) return client_engine;
 			}
 
@@ -107,7 +113,9 @@ namespace steam_proxy
 
 			utils::nt::library::load(steam_path / "tier0_s64.dll");
 			utils::nt::library::load(steam_path / "vstdlib_s64.dll");
+#ifdef LOAD_STEAM_OVERLAY
 			this->steam_overlay_module_ = utils::nt::library::load(steam_path / "gameoverlayrenderer64.dll");
+#endif
 			this->steam_client_module_ = utils::nt::library::load(steam_path / "steamclient64.dll");
 			if (!this->steam_client_module_) return;
 
@@ -115,28 +123,31 @@ namespace steam_proxy
 			if (!this->client_engine_) return;
 
 			this->steam_pipe_ = this->steam_client_module_.invoke<void*>("Steam_CreateSteamPipe");
-			this->global_user_ = this->steam_client_module_.invoke<void*>(
-				"Steam_ConnectToGlobalUser", this->steam_pipe_);
+			this->global_user_ = this->steam_client_module_.invoke<void*>("Steam_ConnectToGlobalUser", this->steam_pipe_);
 			this->client_user_ = this->client_engine_.invoke<void*>(8, this->steam_pipe_, this->global_user_);
 			// GetIClientUser
 			this->client_utils_ = this->client_engine_.invoke<void*>(14, this->steam_pipe_); // GetIClientUtils
 		}
 
-		void start_mod(const std::string& title, const size_t app_id)
+		ownership_state start_mod(const std::string& title, const size_t app_id)
 		{
 			__try
 			{
-				this->start_mod_unsafe(title, app_id);
+				return this->start_mod_unsafe(title, app_id);
 			}
 			__except (EXCEPTION_EXECUTE_HANDLER)
 			{
 				this->do_cleanup();
+				return ownership_state::error;
 			}
 		}
 
-		void start_mod_unsafe(const std::string& title, size_t app_id)
+		ownership_state start_mod_unsafe(const std::string& title, size_t app_id)
 		{
-			if (!this->client_utils_ || !this->client_user_) return;
+			if (!this->client_utils_ || !this->client_user_)
+			{
+				return ownership_state::nosteam;
+			}
 
 			if (!this->client_user_.invoke<bool>("BIsSubscribedApp", app_id))
 			{
@@ -145,11 +156,11 @@ namespace steam_proxy
 
 			this->client_utils_.invoke<void>("SetAppIDForCurrentPipe", app_id, false);
 
-			char our_directory[MAX_PATH] = {0};
+			char our_directory[MAX_PATH]{};
 			GetCurrentDirectoryA(sizeof(our_directory), our_directory);
 
 			const auto path = runner_file.get_extracted_file();
-			const std::string cmdline = utils::string::va("\"%s\" -proc %d", path.data(), GetCurrentProcessId());
+			const auto* cmdline = utils::string::va("\"%s\" -proc %d", path.data(), GetCurrentProcessId());
 
 			steam::game_id game_id;
 			game_id.raw.type = 1; // k_EGameIDTypeGameMod
@@ -158,8 +169,10 @@ namespace steam_proxy
 			const auto* mod_id = "IW6x";
 			game_id.raw.mod_id = *reinterpret_cast<const unsigned int*>(mod_id) | 0x80000000;
 
-			this->client_user_.invoke<bool>("SpawnProcess", path.data(), cmdline.data(), our_directory,
+			this->client_user_.invoke<bool>("SpawnProcess", path.data(), cmdline, our_directory,
 			                                &game_id.bits, title.data(), 0, 0, 0);
+
+			return ownership_state::success;
 		}
 
 		void do_cleanup()
@@ -181,8 +194,7 @@ namespace steam_proxy
 				if (this->steam_client_module_
 					&& this->steam_pipe_
 					&& this->global_user_
-					&& this->steam_client_module_.invoke<bool>("Steam_BConnected", this->global_user_,
-					                                           this->steam_pipe_)
+					&& this->steam_client_module_.invoke<bool>("Steam_BConnected", this->global_user_, this->steam_pipe_)
 					&& this->steam_client_module_.invoke<bool>("Steam_BLoggedOn", this->global_user_, this->steam_pipe_)
 				)
 				{
@@ -195,12 +207,6 @@ namespace steam_proxy
 			});
 		}
 	};
-
-	const utils::nt::library& get_overlay_module()
-	{
-		// TODO: Find a better way to do this
-		return component_loader::get<component>()->get_overlay_module();
-	}
 }
 
 REGISTER_COMPONENT(steam_proxy::component)

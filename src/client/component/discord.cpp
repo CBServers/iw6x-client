@@ -99,7 +99,7 @@ namespace discord
 	public:
 		void post_load() override
 		{
-			if (game::environment::is_dedi() || game::environment::is_linker())
+			if (game::environment::is_dedi())
 			{
 				return;
 			}
@@ -115,7 +115,7 @@ namespace discord
 
 			Discord_Initialize("762374436183343114", &handlers, 1, nullptr);
 
-			scheduler::loop(update_discord, scheduler::pipeline::async, 20s);
+			scheduler::loop(update_discord, scheduler::pipeline::main, 20s);
 
 			initialized_ = true;
 		}
@@ -144,7 +144,7 @@ namespace discord
 
 		static void errored(const int error_code, const char* message)
 		{
-			console::error("Discord: (%i) %s", error_code, message);
+			console::error("Discord: (%i) %s\n", error_code, message);
 		}
 	};
 }

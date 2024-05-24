@@ -13,7 +13,7 @@ namespace demonware
 	{
 		auto result = new bdDMLRawData;
 		result->country_code = "US";
-		result->country_code = "'Murica";
+		result->country = "United States of America";
 		result->region = "New York";
 		result->city = "New York";
 		result->latitude = 0;

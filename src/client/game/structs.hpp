@@ -37,7 +37,14 @@ namespace game
 		FL_DYNAMICPATH = 0x8000000,
 		FL_AUTO_BLOCKPATHS = 0x10000000,
 		FL_OBSTACLE = 0x20000000,
-		FL_BADPLACE_VOLUME = 0x80000000,
+	};
+
+	enum
+	{
+		PMF_UNK1 = 0x80,
+		PMF_UNK2 = 0x100,
+		PMF_JUMPING = 0x2000,
+		PMF_UNK3 = 0x4000,
 	};
 
 	enum XAssetType
@@ -143,6 +150,78 @@ namespace game
 		THREAD_CONTEXT_COUNT = 0x10,
 	};
 
+	enum Sys_Folder
+	{
+		SF_ZONE = 0x0,
+		SF_ZONE_LOC = 0x1,
+		SF_VIDEO = 0x2,
+		SF_VIDEO_LOC = 0x3,
+		SF_PAKFILE = 0x4,
+		SF_PAKFILE_LOC = 0x5,
+		SF_COUNT = 0x6,
+	};
+
+	struct db_internal_state
+	{
+		int mode;
+		union
+		{
+			unsigned int method;
+			struct
+			{
+				unsigned int was;
+				unsigned int need;
+			} check;
+			unsigned int marker;
+		} sub;
+		int nowrap;
+		unsigned int wbits;
+		void* blocks;
+	};
+
+	static_assert(sizeof(db_internal_state) == 0x20);
+
+	struct db_z_stream_s
+	{
+		unsigned char* next_in;
+		unsigned int avail_in;
+		unsigned int total_in;
+		unsigned char* next_out;
+		unsigned int avail_out;
+		unsigned int total_out;
+		char* msg;
+		db_internal_state* state;
+		unsigned char* (*zalloc)(unsigned char*, unsigned int, unsigned int);
+		void (*zfree)(unsigned char*, unsigned char*);
+		unsigned char* opaque;
+		int data_type;
+		unsigned int adler;
+	};
+
+	struct DBFile
+	{
+		void* handle;
+		unsigned __int64 memoryBufferSize;
+		unsigned char* memoryBuffer;
+		char name[64];
+	};
+
+	struct DB_LoadData
+	{
+		DBFile* file;
+		unsigned char* fileBuffer;
+		unsigned __int64 readSize;
+		unsigned __int64 completedReadSize;
+		unsigned __int64 offset;
+		unsigned char* start_in;
+		_OVERLAPPED overlapped;
+		unsigned int readError;
+		db_z_stream_s stream;
+		int readingResident;
+	};
+
+	static_assert(sizeof(DB_LoadData) == 0xB0);
+
 	union Weapon
 	{
 		struct
@@ -165,6 +244,13 @@ namespace game
 		PMEM_SOURCE_DEFAULT_HIGH = 0x3,
 		PMEM_SOURCE_MOVIE = 0x4,
 		PMEM_SOURCE_SCRIPT = 0x5,
+	};
+
+	enum PMem_Direction
+	{
+		PHYS_ALLOC_LOW = 0x0,
+		PHYS_ALLOC_HIGH = 0x1,
+		PHYS_ALLOC_COUNT = 0x2,
 	};
 
 	enum errorParm
@@ -2406,9 +2492,23 @@ namespace game
 		bool removePitchAndRollRotations;
 	};
 
+	static_assert(sizeof(trace_t) == 0x2C);
+
+	struct pml_t
+	{
+		float forward[3];
+		float right[3];
+		float up[3];
+		float frametime;
+		int msec;
+		int walking;
+		int groundPlane;
+		int almostGroundPlane;
+	};
+
 	struct pmove_t
 	{
-		mp::playerState_s* ps;
+		void* ps;
 		usercmd_s cmd;
 		usercmd_s oldcmd;
 		int tracemask;

@@ -12,8 +12,6 @@ namespace gameplay
 		template <typename T, typename R>
 		constexpr auto VectorScale(T v, R s, T out) { out[0] = v[0] * s; out[1] = v[1] * s; out[2] = v[2] * s; }
 
-		constexpr auto JUMP_LAND_SLOWDOWN_TIME = 1800;
-
 		utils::hook::detour pm_weapon_use_ammo_hook;
 
 		int stuck_in_client_stub(void* self)
@@ -115,7 +113,7 @@ namespace gameplay
 			a.jmp(0x140228FB8);
 		});
 
-		void pm_crashland_stub(void* ps, void* pml)
+		const void pm_crashland_stub(void* ps, void* pml)
 		{
 			if (dvars::jump_enableFallDamage->current.enabled)
 			{
@@ -123,42 +121,9 @@ namespace gameplay
 			}
 		}
 
-		void jump_apply_slowdown_stub(game::mp::playerState_s* ps)
-		{
-			auto scale = 1.0f;
-
-			if (ps->pm_time <= JUMP_LAND_SLOWDOWN_TIME)
-			{
-				if (ps->pm_time == 0)
-				{
-					const auto height = ps->jumpOriginZ + 18.0f;
-					if (height <= ps->origin[2])
-					{
-						scale = 0.5f;
-						ps->pm_time = 1200;
-					}
-					else
-					{
-						scale = 0.65f;
-						ps->pm_time = JUMP_LAND_SLOWDOWN_TIME;
-					}
-				}
-			}
-			else
-			{
-				game::Jump_ClearState(ps);
-				scale = 0.65f;
-			}
-
-			if (!dvars::jump_slowdownEnable->current.enabled)
-			{
-				VectorScale(ps->velocity, scale, ps->velocity);
-			}
-		}
-
 		float get_jump_height_stub(void* pmove)
 		{
-			auto jump_height = reinterpret_cast<float (*)(void*)>(0x140213140)(pmove);
+			auto jump_height = reinterpret_cast<float(*)(void*)>(0x140213140)(pmove);
 
 			if (jump_height == 39.f)
 			{
@@ -166,6 +131,135 @@ namespace gameplay
 			}
 
 			return jump_height;
+		}
+
+		void jump_apply_slowdown_stub(game::mp::playerState_s* ps)
+		{
+			assert(ps->pm_flags & game::PMF_JUMPING);
+
+			float scale = 1.0f;
+			if (ps->pm_time > 1800)
+			{
+				game::Jump_ClearState(ps);
+				scale = 0.65f;
+			}
+			else if (ps->pm_time == 0)
+			{
+				if (ps->jumpOriginZ + 18.0f <= ps->origin[2])
+				{
+					ps->pm_time = 1200;
+					scale = 0.5f;
+				}
+				else
+				{
+					ps->pm_time = 1800;
+					scale = 0.65f;
+				}
+			}
+
+			if (dvars::jump_slowdownEnable->current.enabled)
+			{
+				VectorScale(ps->velocity, scale, ps->velocity);
+			}
+		}
+
+		float jump_get_slowdown_friction(game::mp::playerState_s* ps)
+		{
+			assert(ps->pm_flags & game::PMF_JUMPING);
+			assert(ps->pm_time <= game::JUMP_LAND_SLOWDOWN_TIME);
+
+			if (!dvars::jump_slowdownEnable->current.enabled)
+			{
+				return 1.0f;
+			}
+
+			if (ps->pm_time < 1700)
+			{
+				return static_cast<float>(ps->pm_time) * 1.5f * 0.00058823527f + 1.0f;
+			}
+
+			return 2.5f;
+		}
+
+		float jump_reduce_friction_stub(game::mp::playerState_s* ps)
+		{
+			float control;
+
+			assert(ps->pm_flags & game::PMF_JUMPING);
+			if (ps->pm_time > game::JUMP_LAND_SLOWDOWN_TIME)
+			{
+				game::Jump_ClearState(ps);
+				control = 1.0f;
+			}
+			else
+			{
+				control = jump_get_slowdown_friction(ps);
+			}
+
+			return control;
+		}
+
+		float jump_get_land_factor(game::mp::playerState_s* ps)
+		{
+			assert(ps->pm_flags & game::PMF_JUMPING);
+			assert(ps->pm_time <= game::JUMP_LAND_SLOWDOWN_TIME);
+
+			if (!dvars::jump_slowdownEnable->current.enabled)
+			{
+				return 1.0f;
+			}
+
+			if (ps->pm_time < 1700)
+			{
+				return static_cast<float>(ps->pm_time) * 1.5f * 0.00058823527f + 1.0f;
+			}
+
+			return 2.5f;
+		}
+
+		void jump_start_stub(game::pmove_t* pm, game::pml_t* pml, float height)
+		{
+			static_assert(offsetof(game::mp::playerState_s, groundEntityNum) == 0x70);
+			static_assert(offsetof(game::mp::playerState_s, pm_time) == 0x8);
+			static_assert(offsetof(game::mp::playerState_s, sprintState.sprintButtonUpRequired) == 0x240);
+			static_assert(offsetof(game::pml_t, frametime) == 0x24);
+			static_assert(offsetof(game::pml_t, walking) == 0x2C);
+			static_assert(offsetof(game::pml_t, groundPlane) == 0x30);
+			static_assert(offsetof(game::pml_t, almostGroundPlane) == 0x34);
+
+			float factor;
+			float velocity_sqrd;
+			game::mp::playerState_s* ps;
+
+			ps = static_cast<game::mp::playerState_s*>(pm->ps);
+
+			assert(ps);
+
+			velocity_sqrd = (height * 2.0f) * static_cast<float>(ps->gravity);
+
+			if ((ps->pm_flags & game::PMF_JUMPING) != 0 && ps->pm_time <= game::JUMP_LAND_SLOWDOWN_TIME)
+			{
+				factor = jump_get_land_factor(ps);
+				assert(factor);
+				velocity_sqrd = velocity_sqrd / factor;
+			}
+
+			pml->walking = 0;
+			pml->groundPlane = 0;
+
+			ps->groundEntityNum = game::ENTITYNUM_NONE;
+			ps->jumpTime = pm->cmd.serverTime;
+			ps->jumpOriginZ = ps->origin[2];
+			ps->velocity[2] = std::sqrtf(velocity_sqrd);
+			ps->pm_flags &= ~(game::PMF_UNK1 | game::PMF_UNK2);
+			ps->pm_flags |= game::PMF_JUMPING;
+			ps->pm_time = 0;
+			ps->sprintState.sprintButtonUpRequired = 0;
+			ps->aimSpreadScale = ps->aimSpreadScale + dvars::jump_spreadAdd->current.value;
+			if (ps->aimSpreadScale > 255.0f)
+			{
+				ps->aimSpreadScale = 255.0f;
+			}
 		}
 
 		const auto jump_push_off_ladder_stub = utils::hook::assemble([](utils::hook::assembler& a)
@@ -270,9 +364,14 @@ namespace gameplay
 			dvars::g_speed = game::Dvar_RegisterInt("g_speed", 190, 0, 999, game::DVAR_FLAG_NONE, "Maximum player speed");
 
 			utils::hook::call(0x140225857, jump_apply_slowdown_stub);
+			utils::hook::call(0x1402210A2, jump_reduce_friction_stub);
+			utils::hook::call(0x140213015, jump_start_stub);
 			dvars::jump_slowdownEnable = game::Dvar_RegisterBool("jump_slowdownEnable", true,
 			                                                     game::DVAR_FLAG_REPLICATED,
 			                                                     "Slow player movement after jumping");
+			dvars::jump_spreadAdd = game::Dvar_RegisterFloat("jump_spreadAdd", 64.0f,
+			                                                 0.0f, 512.0f, game::DVAR_FLAG_REPLICATED,
+			                                                 "The amount of spread scale to add as a side effect of jumping");
 
 			utils::hook::call(0x1402219A5, pm_crashland_stub);
 			dvars::jump_enableFallDamage = game::Dvar_RegisterBool("jump_enableFallDamage", true,
@@ -292,11 +391,11 @@ namespace gameplay
 			utils::hook::call(0x140221FFA, pm_player_trace_stub);
 			utils::hook::call(0x14021F0E3, pm_trace_stub);
 			dvars::g_enableElevators = game::Dvar_RegisterBool("g_enableElevators", false,
-				game::DVAR_FLAG_REPLICATED, "Enable Elevators");
+			                                                	game::DVAR_FLAG_REPLICATED, "Enable Elevators");
 
 			utils::hook::call(0x1403D933E, weapon_rocket_launcher_fire_stub);
 			dvars::g_rocketPushbackScale = game::Dvar_RegisterFloat("g_rocketPushbackScale", 1.0f, 1.0f, std::numeric_limits<float>::max(),
-				game::DVAR_FLAG_REPLICATED, "The scale applied to the pushback force of a rocket");
+			                                                    game::DVAR_FLAG_REPLICATED, "The scale applied to the pushback force of a rocket");
 		}
 	};
 }

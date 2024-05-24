@@ -16,8 +16,6 @@
 #include <utils/hook.hpp>
 #include <utils/io.hpp>
 
-#include <lua.h>
-
 namespace ui_scripting
 {
 	namespace
@@ -28,25 +26,41 @@ namespace ui_scripting
 		utils::hook::detour hks_shutdown_hook;
 		utils::hook::detour hks_package_require_hook;
 
-		struct globals_t
+		struct script
+		{
+			std::string name;
+			std::string root;
+		};
+
+		struct globals
 		{
 			std::string in_require_script;
-			std::unordered_map<std::string, std::string> loaded_scripts;
+			std::vector<script> loaded_scripts;
 			bool load_raw_script{};
 			std::string raw_script_name{};
 		};
 
-		globals_t globals;
+		globals globals;
 
 		bool is_loaded_script(const std::string& name)
 		{
-			return globals.loaded_scripts.contains(name);
+			return std::ranges::any_of(globals.loaded_scripts, [name](const auto& loaded_script)
+			{
+				return loaded_script.name == name;
+			});
 		}
 
 		std::string get_root_script(const std::string& name)
 		{
-			const auto itr = globals.loaded_scripts.find(name);
-			return (itr == globals.loaded_scripts.end()) ? std::string() : itr->second;
+			for (const auto& loaded_script : globals.loaded_scripts)
+			{
+				if (loaded_script.name == name)
+				{
+					return loaded_script.root;
+				}
+			}
+
+			return {};
 		}
 
 		table get_globals()
@@ -93,7 +107,7 @@ namespace ui_scripting
 
 		void load_script(const std::string& name, const std::string& data)
 		{
-			globals.loaded_scripts[name] = name;
+			globals.loaded_scripts.push_back({name, name});
 
 			const auto lua = get_globals();
 			const auto load_results = lua["loadstring"](data, name);
@@ -186,7 +200,6 @@ namespace ui_scripting
 
 			load_scripts(game_module::get_host_module().get_folder() + "/data/ui_scripts/");
 			load_scripts("iw6x/ui_scripts/");
-			load_scripts("data/ui_scripts/");
 		}
 
 		void try_start()
@@ -254,24 +267,24 @@ namespace ui_scripting
 			if (globals.load_raw_script)
 			{
 				globals.load_raw_script = false;
-				globals.loaded_scripts[globals.raw_script_name] = globals.in_require_script;
+				globals.loaded_scripts.push_back({globals.raw_script_name, globals.in_require_script});
 				return load_buffer(globals.raw_script_name, utils::io::read_file(globals.raw_script_name));
 			}
 
 			return utils::hook::invoke<int>(0x140198B00, state, compiler_options, reader, reader_data, chunk_name);
 		}
 
-		lua_CFunction lua_atpanic_stub(lua_State* l, [[maybe_unused]] lua_CFunction panicf)
+		void* lua_atpanic_stub(void* l, [[maybe_unused]] void* panicf)
 		{
-			return utils::hook::invoke<lua_CFunction>(SELECT_VALUE(0x1401851F0, 0x1401A4730), l, SELECT_VALUE(0x1401789A0, 0x140197BC0));
+			return utils::hook::invoke<void*>(SELECT_VALUE(0x1401851F0, 0x1401A4730), l, SELECT_VALUE(0x1401789A0, 0x140197BC0));
 		}
 
-		int luaopen_stub([[maybe_unused]] lua_State* l)
+		int luaopen_stub([[maybe_unused]] void* l)
 		{
 			return 0;
 		}
 
-		int hks_base_stub([[maybe_unused]] lua_State* l)
+		int hks_base_stub([[maybe_unused]] void* l)
 		{
 			return 0;
 		}

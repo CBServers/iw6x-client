@@ -13,8 +13,6 @@
 #include <utils/hook.hpp>
 #include <utils/string.hpp>
 
-#include <version.hpp>
-
 namespace dedicated
 {
 	namespace
@@ -103,12 +101,6 @@ namespace dedicated
 			*reinterpret_cast<int*>(0x144DB8C88) = 1; // sv_loadScripts
 			*reinterpret_cast<int*>(0x144DB8C8C) = 0; // sv_migrate
 			reinterpret_cast<void(*)()>(0x14046F3B0)(); // SV_CheckLoadGame
-		}
-
-		game::dvar_t* register_maxfps_stub(const char* name, int, int, int, unsigned int flags,
-		                                   const char* desc)
-		{
-			return game::Dvar_RegisterInt(name, 0, 0, 0, game::DvarFlags::DVAR_FLAG_READ, desc);
 		}
 
 		void send_heartbeat()
@@ -220,7 +212,7 @@ namespace dedicated
 			scheduler::once([]()
 			{
 				command::execute("map_rotate");
-			}, scheduler::pipeline::main, 3s); // scheduler::main -> scheduler::pipeline::main ???
+			}, scheduler::pipeline::main, 3s);
 
 			game::Com_Error(game::ERR_DROP, "%s", buffer);
 		}
@@ -256,7 +248,7 @@ namespace dedicated
 	public:
 		void* load_import(const std::string& library, const std::string& function) override
 		{
-			if (!game::environment::is_dedi() && !game::environment::is_linker()) return nullptr;
+			if (!game::environment::is_dedi()) return nullptr;
 
 			if (function == "SetFocus")
 			{
@@ -268,7 +260,7 @@ namespace dedicated
 
 		void post_unpack() override
 		{
-			if (!game::environment::is_dedi() && !game::environment::is_linker())
+			if (!game::environment::is_dedi())
 			{
 				return;
 			}
@@ -282,15 +274,18 @@ namespace dedicated
 			// Make GScr_IsUsingMatchRulesData return 0 so the game doesn't override the cfg
 			utils::hook::jump(0x1403C9660, gscr_is_using_match_rules_data_stub);
 
-			// patch "Server is different version"
-			utils::hook::inject(0x140471479 + 3, VERSION);
+			// Patch "Server is on a different version"
+			utils::hook::set<uint8_t>(0x140471474, 0xEB);
+
+			// Patch checksum check
+			utils::hook::set<uint8_t>(0x1404714D4, 0xEB);
 
 			// Hook R_SyncGpu
 			utils::hook::jump(0x1405E8530, sync_gpu_stub);
 
 			//utils::hook::set<uint8_t>(0x1402C89A0, 0xC3); // R_Init caller
 			utils::hook::jump(0x1402C89A0, init_dedicated_server);
-			utils::hook::call(0x140413AD8, register_maxfps_stub);
+			dvars::override::register_int("com_maxfps", 0, 0, 0, game::DVAR_FLAG_READ);
 
 			// delay startup commands until the initialization is done
 			utils::hook::call(0x140412183, execute_startup_command);
@@ -298,6 +293,10 @@ namespace dedicated
 			// delay console commands until the initialization is done
 			utils::hook::call(0x140412FD3, execute_console_command);
 			utils::hook::nop(0x140412FE9, 5);
+
+			// disable check on an unregistered relay dvar
+			utils::hook::nop(0x14041E9EB, 4);
+			utils::hook::set<std::uint8_t>(0x14041E9EF, 0xEB);
 
 			utils::hook::nop(0x1404DDC2E, 5); // don't load config file
 			utils::hook::set<uint8_t>(0x140416100, 0xC3); // don't save config file

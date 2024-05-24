@@ -3,16 +3,84 @@
 #include "loader/loader.hpp"
 #include "loader/component_loader.hpp"
 #include "game/game.hpp"
+#include "component/updater.hpp"
 
 #include <utils/flags.hpp>
 #include <utils/io.hpp>
+#include <utils/string.hpp>
 
-#include "component/updater.hpp"
+#include <DbgHelp.h>
 
-DECLSPEC_NORETURN void WINAPI exit_hook(const int code)
+#include <version.hpp>
+
+const char* get_current_date()
+{
+	auto now = std::chrono::system_clock::now();
+	auto current_time = std::chrono::system_clock::to_time_t(now);
+	std::tm local_time{};
+
+	(void)localtime_s(&local_time, &current_time);
+
+	std::stringstream ss;
+	ss << std::put_time(&local_time, "%Y%m%d_%H%M%S");
+
+	const auto result = ss.str();
+	return utils::string::va("%s", result.data());
+}
+
+LONG WINAPI exception_handler(PEXCEPTION_POINTERS exception_info)
+{
+	if (exception_info->ExceptionRecord->ExceptionCode == 0x406D1388)
+	{
+		return EXCEPTION_CONTINUE_EXECUTION;
+	}
+
+	if (exception_info->ExceptionRecord->ExceptionCode < 0x80000000 ||
+		exception_info->ExceptionRecord->ExceptionCode == 0xE06D7363)
+	{
+		return EXCEPTION_CONTINUE_SEARCH;
+	}
+
+	MINIDUMP_EXCEPTION_INFORMATION exception_information =
+	{
+		GetCurrentThreadId(), exception_info, FALSE
+	};
+
+	const auto type = MiniDumpIgnoreInaccessibleMemory
+		| MiniDumpWithHandleData
+		| MiniDumpScanMemory
+		| MiniDumpWithProcessThreadData
+		| MiniDumpWithFullMemoryInfo
+		| MiniDumpWithThreadInfo;
+
+	CreateDirectoryA("minidumps", nullptr);
+	const auto* file_name = utils::string::va("minidumps\\IW6x_%s_%s.dmp", SHORTVERSION, get_current_date());
+	constexpr auto file_share = FILE_SHARE_READ | FILE_SHARE_WRITE;
+
+	const auto file_handle = CreateFileA(file_name, GENERIC_WRITE | GENERIC_READ, file_share, nullptr,
+		CREATE_ALWAYS, NULL, nullptr);
+
+	if (!MiniDumpWriteDump(GetCurrentProcess(), GetCurrentProcessId(),
+		file_handle, static_cast<MINIDUMP_TYPE>(type),
+		&exception_information, nullptr, nullptr))
+	{
+		char buf[4096]{};
+		sprintf_s(buf, "An exception 0x%08X occurred at location 0x%p\n",
+			exception_info->ExceptionRecord->ExceptionCode,
+			exception_info->ExceptionRecord->ExceptionAddress);
+		game::show_error(buf);
+	}
+
+	CloseHandle(file_handle);
+	TerminateProcess(GetCurrentProcess(), exception_info->ExceptionRecord->ExceptionCode);
+
+	return EXCEPTION_CONTINUE_SEARCH;
+}
+
+[[noreturn]] void WINAPI exit_hook(const int code)
 {
 	component_loader::pre_destroy();
-	exit(code);
+	std::exit(code);
 }
 
 
@@ -34,11 +102,6 @@ FARPROC WINAPI get_proc_address(const HMODULE hModule, const LPCSTR lpProcName)
 
 launcher::mode detect_mode_from_arguments()
 {
-	if (utils::flags::has_flag("linker"))
-	{
-		return launcher::mode::linker;
-	}
-
 	if (utils::flags::has_flag("dedicated"))
 	{
 		return launcher::mode::server;
@@ -68,15 +131,18 @@ FARPROC load_binary(const launcher::mode mode)
 		{
 			return self.get_proc<FARPROC>(function);
 		}
-		else if (function == "ExitProcess")
+
+		if (function == "ExitProcess")
 		{
 			return exit_hook;
 		}
-		else if (function == "SystemParametersInfoA")
+
+		if (function == "SystemParametersInfoA")
 		{
 			return system_parameters_info_a;
 		}
-		else if (function == "GetProcAddress")
+
+		if (function == "GetProcAddress")
 		{
 			return get_proc_address;
 		}
@@ -87,7 +153,6 @@ FARPROC load_binary(const launcher::mode mode)
 	std::string binary;
 	switch (mode)
 	{
-	case launcher::mode::linker:
 	case launcher::mode::server:
 	case launcher::mode::multiplayer:
 		binary = "iw6mp64_ship.exe";
@@ -192,6 +257,9 @@ void check_if_has_iw6()
 
 int main()
 {
+	AddVectoredExceptionHandler(0, exception_handler);
+	SetProcessDEPPolicy(PROCESS_DEP_ENABLE);
+
 	FARPROC entry_point;
 	enable_dpi_awareness();
 
@@ -199,7 +267,7 @@ int main()
 	// people will start with admin rights if it crashes.
 	limit_parallel_dll_loading();
 
-	srand(uint32_t(time(nullptr)));
+	std::srand(static_cast<std::uint32_t>(time(nullptr)) ^ ~(GetTickCount() * GetCurrentProcessId()));
 
 	{
 		auto premature_shutdown = true;
@@ -242,7 +310,7 @@ int main()
 		}
 		catch (std::exception& e)
 		{
-			MessageBoxA(nullptr, e.what(), "ERROR", MB_ICONERROR);
+			game::show_error(e.what());
 			return 1;
 		}
 	}

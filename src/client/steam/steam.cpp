@@ -27,9 +27,9 @@ namespace steam
 	void callbacks::unregister_callback(base* handler)
 	{
 		std::lock_guard<std::recursive_mutex> _(mutex_);
-		for(auto i = callback_list_.begin(); i != callback_list_.end();)
+		for (auto i = callback_list_.begin(); i != callback_list_.end();)
 		{
-			if(*i == handler)
+			if (*i == handler)
 			{
 				i = callback_list_.erase(i);
 			}
@@ -50,7 +50,7 @@ namespace steam
 	{
 		std::lock_guard<std::recursive_mutex> _(mutex_);
 		const auto i = result_handlers_.find(call);
-		if(i != result_handlers_.end())
+		if (i != result_handlers_.end())
 		{
 			result_handlers_.erase(i);
 		}
@@ -82,6 +82,9 @@ namespace steam
 				result_handlers_[result.call]->run(result.data, false, result.call);
 			}
 
+			// Reportedly this can cause issues and crashes. Considering the great lack of any Steam features in this client disabling this
+			// shouldn't be a problem
+#if 0
 			for (const auto& callback : callback_list_)
 			{
 				if (callback && callback->get_i_callback() == result.type)
@@ -89,148 +92,146 @@ namespace steam
 					callback->run(result.data, false, 0);
 				}
 			}
+#endif
 
 			if (result.data)
 			{
-				free(result.data);
+				std::free(result.data);
 			}
 		}
 
 		results_.clear();
 	}
 
-	extern "C" {
-	bool SteamAPI_RestartAppIfNecessary()
+	extern "C"
 	{
-		return false;
-	}
-
-	bool SteamAPI_Init()
-	{
-		return true;
-	}
-
-	void SteamAPI_RegisterCallResult(callbacks::base* result, const uint64_t call)
-	{
-		callbacks::register_call_result(call, result);
-	}
-
-	void SteamAPI_RegisterCallback(callbacks::base* handler, const int callback)
-	{
-		callbacks::register_callback(handler, callback);
-	}
-
-	void SteamAPI_RunCallbacks()
-	{
-		callbacks::run_callbacks();
-	}
-
-	void SteamAPI_Shutdown()
-	{
-	}
-
-	void SteamAPI_UnregisterCallResult(callbacks::base* result, const uint64_t call)
-	{
-		callbacks::unregister_call_result(call, result);
-	}
-
-	void SteamAPI_UnregisterCallback(callbacks::base* handler)
-	{
-		callbacks::unregister_callback(handler);
-	}
-
-	const char* SteamAPI_GetSteamInstallPath()
-	{
-		static std::string install_path{};
-		if (!install_path.empty())
+		bool SteamAPI_RestartAppIfNecessary()
 		{
+			return false;
+		}
+
+		bool SteamAPI_Init()
+		{
+			return true;
+		}
+
+		void SteamAPI_RegisterCallResult(callbacks::base* result, const uint64_t call)
+		{
+			callbacks::register_call_result(call, result);
+		}
+
+		void SteamAPI_RegisterCallback(callbacks::base* handler, const int callback)
+		{
+			callbacks::register_callback(handler, callback);
+		}
+
+		void SteamAPI_RunCallbacks()
+		{
+			callbacks::run_callbacks();
+		}
+
+		void SteamAPI_Shutdown()
+		{
+		}
+
+		void SteamAPI_UnregisterCallResult(callbacks::base* result, const uint64_t call)
+		{
+			callbacks::unregister_call_result(call, result);
+		}
+
+		void SteamAPI_UnregisterCallback(callbacks::base* handler)
+		{
+			callbacks::unregister_callback(handler);
+		}
+
+		const char* SteamAPI_GetSteamInstallPath()
+		{
+			static std::string install_path{};
+			if (!install_path.empty())
+			{
+				return install_path.data();
+			}
+
+			HKEY reg_key;
+			if (RegOpenKeyExA(HKEY_LOCAL_MACHINE, "Software\\WOW6432Node\\Valve\\Steam", 0, KEY_QUERY_VALUE, &reg_key) == ERROR_SUCCESS)
+			{
+				char path[MAX_PATH]{};
+				DWORD length = sizeof(path);
+				RegQueryValueExA(reg_key, "InstallPath", nullptr, nullptr, reinterpret_cast<BYTE*>(path),
+				                 &length);
+				RegCloseKey(reg_key);
+
+				install_path = path;
+			}
+
 			return install_path.data();
 		}
 
-		HKEY reg_key;
-		if (RegOpenKeyExA(HKEY_LOCAL_MACHINE, "Software\\WOW6432Node\\Valve\\Steam", 0, KEY_QUERY_VALUE,
-		                  &reg_key) ==
-			ERROR_SUCCESS)
+		bool SteamGameServer_Init()
 		{
-			char path[MAX_PATH] = {0};
-			DWORD length = sizeof(path);
-			RegQueryValueExA(reg_key, "InstallPath", nullptr, nullptr, reinterpret_cast<BYTE*>(path),
-			                 &length);
-			RegCloseKey(reg_key);
-
-			install_path = path;
+			return true;
 		}
 
-		return install_path.data();
-	}
+		void SteamGameServer_RunCallbacks()
+		{
+		}
 
+		void SteamGameServer_Shutdown()
+		{
+		}
 
-	bool SteamGameServer_Init()
-	{
-		return true;
-	}
+		friends* SteamFriends()
+		{
+			static friends friends;
+			return &friends;
+		}
 
-	void SteamGameServer_RunCallbacks()
-	{
-	}
+		matchmaking* SteamMatchmaking()
+		{
+			static matchmaking matchmaking;
+			return &matchmaking;
+		}
 
-	void SteamGameServer_Shutdown()
-	{
-	}
+		game_server* SteamGameServer()
+		{
+			static game_server game_server;
+			return &game_server;
+		}
 
+		networking* SteamNetworking()
+		{
+			static networking networking;
+			return &networking;
+		}
 
-	friends* SteamFriends()
-	{
-		static friends friends;
-		return &friends;
-	}
+		remote_storage* SteamRemoteStorage()
+		{
+			static remote_storage remote_storage;
+			return &remote_storage;
+		}
 
-	matchmaking* SteamMatchmaking()
-	{
-		static matchmaking matchmaking;
-		return &matchmaking;
-	}
+		user* SteamUser()
+		{
+			static user user;
+			return &user;
+		}
 
-	game_server* SteamGameServer()
-	{
-		static game_server game_server;
-		return &game_server;
-	}
+		utils* SteamUtils()
+		{
+			static utils utils;
+			return &utils;
+		}
 
-	networking* SteamNetworking()
-	{
-		static networking networking;
-		return &networking;
-	}
+		apps* SteamApps()
+		{
+			static apps apps;
+			return &apps;
+		}
 
-	remote_storage* SteamRemoteStorage()
-	{
-		static remote_storage remote_storage;
-		return &remote_storage;
-	}
-
-	user* SteamUser()
-	{
-		static user user;
-		return &user;
-	}
-
-	utils* SteamUtils()
-	{
-		static utils utils;
-		return &utils;
-	}
-
-	apps* SteamApps()
-	{
-		static apps apps;
-		return &apps;
-	}
-
-	user_stats* SteamUserStats()
-	{
-		static user_stats user_stats;
-		return &user_stats;
-	}
+		user_stats* SteamUserStats()
+		{
+			static user_stats user_stats;
+			return &user_stats;
+		}
 	}
 }

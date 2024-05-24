@@ -1,6 +1,8 @@
 #include <std_include.hpp>
 #include "game.hpp"
 
+#include <utils/flags.hpp>
+
 namespace game
 {
 	int Cmd_Argc()
@@ -52,11 +54,6 @@ namespace game
 			return get_mode() == launcher::mode::singleplayer;
 		}
 
-		bool is_linker()
-		{
-			return get_mode() == launcher::mode::linker;
-		}
-
 		void set_mode(const launcher::mode _mode)
 		{
 			mode = _mode;
@@ -82,6 +79,24 @@ namespace game
 			default:
 				return "Unknown (" + std::to_string(static_cast<int>(mode)) + ")";
 			}
+		}
+	}
+
+	bool is_headless()
+	{
+		static const auto headless = utils::flags::has_flag("headless");
+		return headless;
+	}
+
+	void show_error(const std::string& text, const std::string& title)
+	{
+		if (is_headless())
+		{
+			puts(text.data());
+		}
+		else
+		{
+			MessageBoxA(nullptr, text.data(), title.data(), MB_ICONERROR | MB_SETFOREGROUND | MB_TOPMOST);
 		}
 	}
 }

@@ -476,7 +476,8 @@ spawnplayer( var_0 )
         self.waitingtospawnamortize = 0;
     }
 
-    //  // Returning false we use default character model and prevent a 5 second respawn delay. (Github issue #109)
+    // It's possible when changing teams that we don't have our own customization loaded, wait until that's done
+    // Setting self.waitingtospawnamortize to false so we can use the default character model and prevent a 5 second respawn delay. (Github issue #109)
     if ( !self hasloadedcustomizationplayerview( self ) )
         self.waitingtospawnamortize = 0;
 
@@ -1057,13 +1058,6 @@ removeplayerondisconnect()
 
 initclientdvarssplitscreenspecific()
 {
-    if ( level.splitscreen || self issplitscreenplayer() )
-    {
-        self setclientdvars( "cg_hudGrenadeIconHeight", "37.5", "cg_hudGrenadeIconWidth", "37.5", "cg_hudGrenadeIconOffset", "75", "cg_hudGrenadePointerHeight", "18", "cg_hudGrenadePointerWidth", "37.5", "cg_hudGrenadePointerPivot", "18 40.5", "cg_fovscale", "0.75" );
-        setdvar( "r_materialBloomHQScriptMasterEnable", 0 );
-    }
-    else
-        self setclientdvars( "cg_hudGrenadeIconHeight", "25", "cg_hudGrenadeIconWidth", "25", "cg_hudGrenadeIconOffset", "50", "cg_hudGrenadePointerHeight", "12", "cg_hudGrenadePointerWidth", "25", "cg_hudGrenadePointerPivot", "12 27", "cg_fovscale", "1" );
 }
 
 initclientdvars()
@@ -1086,16 +1080,7 @@ initclientdvars()
     else
         setdvar( "cg_drawFriendlyNamesAlways", 0 );
 
-    self setclientdvars( "cg_drawSpectatorMessages", 1, "cg_scoreboardPingGraph", 1 );
     initclientdvarssplitscreenspecific();
-
-    if ( maps\mp\_utility::getgametypenumlives() )
-        self setclientdvars( "cg_deadChatWithDead", 1, "cg_deadChatWithTeam", 0, "cg_deadHearTeamLiving", 0, "cg_deadHearAllLiving", 0 );
-    else
-        self setclientdvars( "cg_deadChatWithDead", 0, "cg_deadChatWithTeam", 1, "cg_deadHearTeamLiving", 1, "cg_deadHearAllLiving", 0 );
-
-    if ( level.teambased )
-        self setclientdvars( "cg_everyonehearseveryone", 0 );
 
     self setclientdvar( "ui_altscene", 0 );
 
@@ -1296,7 +1281,6 @@ callback_playerconnect()
     if ( game["state"] == "postgame" )
     {
         self.connectedpostgame = 1;
-        self setclientdvars( "cg_drawSpectatorMessages", 0 );
         spawnintermission();
     }
     else

@@ -45,7 +45,7 @@ namespace input
 	public:
 		void post_unpack() override
 		{
-			if (game::environment::is_dedi() || game::environment::is_linker())
+			if (game::environment::is_dedi())
 			{
 				return;
 			}

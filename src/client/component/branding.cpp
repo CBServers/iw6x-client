@@ -2,8 +2,8 @@
 #include "loader/component_loader.hpp"
 #include "localized_strings.hpp"
 #include "scheduler.hpp"
-#include "command.hpp"
 #include "game/game.hpp"
+#include "game/dvars.hpp"
 
 #include <utils/hook.hpp>
 #include <utils/string.hpp>
@@ -15,7 +15,6 @@ namespace branding
 	namespace
 	{
 		utils::hook::detour ui_get_formatted_build_number_hook;
-		game::dvar_t* ui_showBranding;
 
 		void dvar_set_string_stub(game::dvar_t* dvar, const char* string)
 		{
@@ -35,36 +34,9 @@ namespace branding
 	public:
 		void post_unpack() override
 		{
-			if (game::environment::is_dedi() || game::environment::is_linker())
+			if (game::environment::is_dedi())
 			{
 				return;
-			}
-
-			if (game::environment::is_mp())
-			{
-				command::add("\x6A\x61\x73\x6D\x69\x6E", [&]()
-				{
-					if (!game::SV_Loaded())
-					{
-						return;
-					}
-
-					const auto* text = "\x4A\x20\x26\x20\x4D\x20\x3C\x33";
-					const auto index = game::G_FindConfigstringIndex(text, 0x21D, 0x258, 1, "");
-
-					auto* game_hudelem = game::HudElem_Alloc(0x7FF, 0);
-					auto* hudelem = &game_hudelem->elem;
-
-					hudelem->fontScale = 2.0f;
-					hudelem->x = 100;
-					hudelem->color.rgba = 0xFF000000;
-					hudelem->glowColor.rgba = 0xFF0000FF;
-					hudelem->text = static_cast<int>(index);
-					hudelem->type = game::he_type_t::HE_TYPE_TEXT;
-					hudelem->flags |= 1;
-				});
-
-				localized_strings::override("LUA_MENU_MULTIPLAYER_CAPS", "IW6x: MULTIPLAYER\n");
 			}
 
 			localized_strings::override("LUA_MENU_LEGAL_COPYRIGHT", "IW6x: " VERSION " by X Labs.\n");
@@ -73,12 +45,14 @@ namespace branding
 			ui_get_formatted_build_number_hook.create(
 				SELECT_VALUE(0x140415FD0, 0x1404D7C00), ui_get_formatted_build_number_stub);
 
-			ui_showBranding = game::Dvar_RegisterBool("ui_showBranding", false,
-				game::DVAR_FLAG_NONE, "Show IW6x branding at the top left");
+			dvars::ui_showBranding = game::Dvar_RegisterBool("ui_showBranding", false, game::DVAR_FLAG_SAVED, "Show IW6x branding at the top left");
 
 			scheduler::loop([]()
 			{
-				if (!ui_showBranding->current.enabled) return;
+				if (dvars::ui_showBranding && !dvars::ui_showBranding->current.enabled)
+				{
+					return;
+				}
 
 				const auto x = 3;
 				const auto y = 0;
@@ -89,7 +63,7 @@ namespace branding
 				auto* font = game::R_RegisterFont("fonts/normalfont");
 				if (!font) return;
 
-				game::R_AddCmdDrawText(text, 0x7FFFFFFF, font, static_cast<float>(x),
+				game::R_AddCmdDrawText(text, std::numeric_limits<int>::max(), font, static_cast<float>(x),
 				                       y + static_cast<float>(font->pixelHeight) * scale,
 				                       scale, scale, 0.0f, color, 0);
 			}, scheduler::pipeline::renderer);

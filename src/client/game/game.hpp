@@ -16,7 +16,6 @@ namespace game
 		bool is_mp();
 		bool is_sp();
 		bool is_dedi();
-		bool is_linker();
 
 		void set_mode(launcher::mode mode);
 
@@ -58,11 +57,19 @@ namespace game
 		T* mp_object_;
 	};
 
-	int Cmd_Argc();
-	const char* Cmd_Argv(int index);
+	[[nodiscard]] int Cmd_Argc();
+	[[nodiscard]] const char* Cmd_Argv(int index);
 
-	int SV_Cmd_Argc();
-	const char* SV_Cmd_Argv(int index);
+	[[nodiscard]] int SV_Cmd_Argc();
+	[[nodiscard]] const char* SV_Cmd_Argv(int index);
+
+	[[nodiscard]] bool is_headless();
+	void show_error(const std::string& text, const std::string& title = "Error");
+
+	constexpr auto MAX_GENTITIES = 2048;
+	constexpr auto ENTITYNUM_NONE = MAX_GENTITIES - 1;
+
+	constexpr auto JUMP_LAND_SLOWDOWN_TIME = 1800;
 }
 
 #include "symbols.hpp"

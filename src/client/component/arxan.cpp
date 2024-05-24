@@ -1,7 +1,8 @@
 #include <std_include.hpp>
 #include "loader/component_loader.hpp"
-#include "scheduler.hpp"
 #include "game/game.hpp"
+
+#include "scheduler.hpp"
 
 #include <utils/hook.hpp>
 
@@ -111,30 +112,6 @@ namespace arxan
 
 			return SetThreadContext(thread, context);
 		}
-
-		void dw_frame_stub(const int index)
-		{
-			const auto status = game::dwGetLogOnStatus(index);
-
-			if (status == game::DW_LIVE_CONNECTING)
-			{
-				// dwLogOnComplete
-				reinterpret_cast<void(*)(int)>(0x1405894D0)(index);
-			}
-			else if (status == game::DW_LIVE_DISCONNECTED)
-			{
-				// dwLogOnStart
-				reinterpret_cast<void(*)(int)>(0x140589E10)(index);
-			}
-			else
-			{
-				// dwLobbyPump
-				//reinterpret_cast<void(*)(int)>(0x1405918E0)(index);
-
-				// DW_Frame
-				reinterpret_cast<void(*)(int)>(0x14000F9A6)(index);
-			}
-		}
 	}
 
 	class component final : public component_interface
@@ -165,20 +142,12 @@ namespace arxan
 
 		void post_unpack() override
 		{
-			// cba to implement sp, not sure if it's even needed
 			if (game::environment::is_sp()) return;
 
 			utils::hook::jump(0x1404FE1E0, 0x1404FE2D0); // idk
 			utils::hook::jump(0x140558C20, 0x140558CB0); // dwNetPump
 			utils::hook::jump(0x140591850, 0x1405918E0); // dwLobbyPump
 			utils::hook::jump(0x140589480, 0x140589490); // dwGetLogonStatus
-
-			// These two are inlined with their synchronization. Need to work around that
-			//utils::hook::jump(0x14015EB9A, 0x140589E10); // dwLogOnStart
-			//utils::hook::call(0x140588306, 0x1405894D0); // dwLogOnComplete
-
-			// Unfinished for now
-			//utils::hook::jump(0x1405881E0, dw_frame_stub);
 
 			// Fix arxan crashes
 			// Are these opaque predicates?

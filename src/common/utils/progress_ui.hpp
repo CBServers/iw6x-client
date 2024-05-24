@@ -24,6 +24,6 @@ namespace utils
 		}
 
 	private:
-		CComPtr<IProgressDialog> dialog_{};
+		IProgressDialog* dialog_{};
 	};
 }

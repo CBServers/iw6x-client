@@ -4,19 +4,21 @@
 
 #include "command.hpp"
 #include "console.hpp"
-#include "scheduler.hpp"
-#include "party.hpp"
+#include "filesystem.hpp"
 #include "network.hpp"
+#include "party.hpp"
+#include "scheduler.hpp"
 #include "server_list.hpp"
 
 #include <utils/hook.hpp>
 #include <utils/string.hpp>
-#include <utils/cryptography.hpp>
 
 namespace bots
 {
 	namespace
 	{
+		constexpr std::size_t MAX_NAME_LENGTH = 16;
+
 		bool can_add()
 		{
 			return party::get_client_count() < *game::mp::svs_clientCount;
@@ -73,8 +75,8 @@ namespace bots
 				return;
 			}
 
-			auto* bot_name = game::SV_BotGetRandomName();
-			auto* bot_ent = game::SV_AddBot(bot_name, 26, 62, 0);
+			const auto* bot_name = game::SV_BotGetRandomName();
+			const auto* bot_ent = game::SV_AddBot(bot_name, 26, 62, 0);
 			if (bot_ent)
 			{
 				spawn_bot(bot_ent->s.number);
@@ -83,16 +85,52 @@ namespace bots
 
 		utils::hook::detour get_bot_name_hook;
 		volatile bool bot_names_received = false;
-		std::vector<std::string> bot_names{};
+		std::vector<std::string> bot_names;
+
+		bool should_use_remote_bot_names()
+		{
+			return !filesystem::exists("bots.txt");
+		}
+
+		void parse_bot_names_from_file()
+		{
+			std::string data;
+			filesystem::read_file("bots.txt", &data);
+			if (data.empty())
+			{
+				return;
+			}
+
+			auto name_list = utils::string::split(data, '\n');
+			for (auto& entry : name_list)
+			{
+				// Take into account CR line endings
+				entry = utils::string::replace(entry, "\r", "");
+
+				if (entry.empty())
+				{
+					continue;
+				}
+
+				entry = entry.substr(0, MAX_NAME_LENGTH - 1);
+				bot_names.emplace_back(entry);
+			}
+		}
 
 		const char* get_random_bot_name()
 		{
-			if (!bot_names_received || bot_names.empty())
+			if (!bot_names_received && bot_names.empty())
+			{
+				// last attempt to use custom names if they can be found
+				parse_bot_names_from_file();
+			}
+
+			if (bot_names.empty())
 			{
 				return get_bot_name_hook.invoke<const char*>();
 			}
 
-			const auto index = utils::cryptography::random::get_integer() % bot_names.size();
+			const auto index = std::rand() % bot_names.size();
 			const auto& name = bot_names.at(index);
 
 			return utils::string::va("%.*s", static_cast<int>(name.size()), name.data());
@@ -127,25 +165,34 @@ namespace bots
 			{
 				if (!game::SV_Loaded()) return;
 
-				auto num_bots = 1;
+				std::size_t num_bots = 1;
 				if (params.size() == 2)
 				{
-					num_bots = atoi(params.get(1));
+					num_bots = std::strtoul(params.get(1), nullptr, 10);
 				}
 
-				num_bots = std::min(num_bots, *game::mp::svs_clientCount);
+				num_bots = std::min(num_bots, static_cast<std::size_t>(*game::mp::svs_clientCount));
 
-				for (auto i = 0; i < num_bots; i++)
+				console::info("Spawning %zu %s\n", num_bots, (num_bots == 1 ? "bot" : "bots"));
+
+				for (std::size_t i = 0; i < num_bots; ++i)
 				{
 					scheduler::once(add_bot, scheduler::pipeline::server, 100ms * i);
 				}
 			});
 
-			scheduler::on_game_initialized([]()
+			if (should_use_remote_bot_names())
 			{
-				update_bot_names();
-				scheduler::loop(update_bot_names, scheduler::main, 1h);
-			}, scheduler::main);
+				scheduler::on_game_initialized([]()
+				{
+					update_bot_names();
+					scheduler::loop(update_bot_names, scheduler::main, 1h);
+				}, scheduler::main);
+			}
+			else
+			{
+				parse_bot_names_from_file();
+			}
 
 			network::on("getbotsResponse", [](const game::netadr_s& target, const std::string& data)
 			{
@@ -153,6 +200,7 @@ namespace bots
 				if (server_list::get_master_server(master) && !bot_names_received && target == master)
 				{
 					bot_names = utils::string::split(data, '\n');
+					console::info("Got %zu names from the master server\n", bot_names.size());
 					bot_names_received = true;
 				}
 			});

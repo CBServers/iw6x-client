@@ -14,7 +14,7 @@ namespace bullet
 
 		float bg_get_surface_penetration_depth_stub(game::Weapon weapon, bool is_alternate, int surfaceType)
 		{
-			if (dvars::bg_surfacePenetration->current.value > 0.0f)
+			if (dvars::bg_surfacePenetration && dvars::bg_surfacePenetration->current.value > 0.0f)
 			{
 				return dvars::bg_surfacePenetration->current.value;
 			}

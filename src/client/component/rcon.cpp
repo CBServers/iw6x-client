@@ -15,6 +15,7 @@ namespace rcon
 	{
 		bool is_redirecting_ = false;
 		game::netadr_s redirect_target_ = {};
+		std::string redirect_buffer = {};
 		std::recursive_mutex redirect_lock;
 
 		void setup_redirect(const game::netadr_s& target)
@@ -23,34 +24,36 @@ namespace rcon
 
 			is_redirecting_ = true;
 			redirect_target_ = target;
+			redirect_buffer.clear();
 		}
 
 		void clear_redirect()
 		{
 			std::lock_guard<std::recursive_mutex> $(redirect_lock);
 
+			network::send(redirect_target_, "print", redirect_buffer, '\n');
+
 			is_redirecting_ = false;
 			redirect_target_ = {};
+			redirect_buffer.clear();
 		}
 
 		std::string build_status_buffer()
 		{
-			const auto sv_maxclients = game::Dvar_FindVar("sv_maxclients");
-			const auto mapname = game::Dvar_FindVar("mapname");
+			const auto* sv_maxclients = game::Dvar_FindVar("sv_maxclients");
+			const auto* mapname = game::Dvar_FindVar("mapname");
 
-			auto buffer = ""s;
+			std::string buffer;
 			buffer.append(utils::string::va("map: %s\n", mapname->current.string));
-			buffer.append(
-				"num score bot ping guid                             name             address               qport\n");
-			buffer.append(
-				"--- ----- --- ---- -------------------------------- ---------------- --------------------- -----\n");
+			buffer.append("num score bot ping guid                             name             address               qport\n");
+			buffer.append("--- ----- --- ---- -------------------------------- ---------------- --------------------- -----\n");
 
 			for (int i = 0; i < sv_maxclients->current.integer; i++)
 			{
 				const auto client = &game::mp::svs_clients[i];
 				auto self = &game::mp::g_entities[i];
 
-				char clean_name[32] = {0};
+				char clean_name[32]{};
 				strncpy_s(clean_name, self->client->sess.cs.name, sizeof(clean_name));
 				game::I_CleanStr(clean_name);
 
@@ -60,11 +63,7 @@ namespace rcon
 					                                i,
 					                                self->client->sess.scores.score,
 					                                game::SV_BotIsBot(i) ? "Yes" : "No",
-					                                (client->header.state == game::CS_RECONNECTING)
-						                                ? "CNCT"
-						                                : (client->header.state == game::CS_ZOMBIE)
-						                                ? "ZMBI"
-						                                : utils::string::va("%4i", client->ping),
+					                                (client->header.state == game::CS_RECONNECTING) ? "CNCT" : (client->header.state == game::CS_ZOMBIE) ? "ZMBI" : utils::string::va("%4i", client->ping),
 					                                game::SV_GetGuid(i),
 					                                clean_name,
 					                                network::net_adr_to_string(client->header.netchan.remoteAddress),
@@ -110,9 +109,10 @@ namespace rcon
 
 		if (is_redirecting_)
 		{
-			network::send(redirect_target_, "print\n", message);
+			redirect_buffer.append(message);
 			return true;
 		}
+
 		return false;
 	}
 
@@ -129,7 +129,7 @@ namespace rcon
 				                          "The password for remote console");
 			}, scheduler::pipeline::main);
 
-			command::add("status", [&]()
+			command::add("status", []()
 			{
 				const auto sv_running = game::Dvar_FindVar("sv_running");
 				if (!sv_running || !sv_running->current.enabled)
@@ -138,13 +138,13 @@ namespace rcon
 					return;
 				}
 
-				auto status_buffer = build_status_buffer();
-				console::info(status_buffer.data());
+				const auto status = build_status_buffer();
+				console::info("%s", status.data());
 			});
 
 			if (!game::environment::is_dedi())
 			{
-				command::add("rcon", [&](const command::params& params)
+				command::add("rcon", [](const command::params& params)
 				{
 					static std::string rcon_password{};
 
@@ -181,9 +181,8 @@ namespace rcon
 
 					const auto password = data.substr(0, pos);
 					const auto command = data.substr(pos + 1);
-					const auto rcon_password = game::Dvar_FindVar("rcon_password");
-					if (command.empty() || !rcon_password || !rcon_password->current.string || !strlen(
-						rcon_password->current.string))
+					const auto* rcon_password = game::Dvar_FindVar("rcon_password");
+					if (command.empty() || !rcon_password || !*rcon_password->current.string)
 					{
 						return;
 					}

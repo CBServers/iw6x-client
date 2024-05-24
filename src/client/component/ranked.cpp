@@ -17,10 +17,20 @@ namespace ranked
 		utils::hook::detour bg_bot_fast_file_enabled_hook;
 		utils::hook::detour bg_bots_using_team_difficulty_hook;
 
-		int bg_bot_system_enabled_stub()
+		bool should_activate_bot_system()
 		{
 			const auto* game_type = game::Dvar_FindVar("g_gametype")->current.string;
 			if (!std::strcmp(game_type, "aliens") || !std::strcmp(game_type, "horde"))
+			{
+				return false;
+			}
+
+			return true;
+		}
+
+		int bg_bot_system_enabled_stub()
+		{
+			if (!should_activate_bot_system())
 			{
 				return bg_bot_system_enabled_hook.invoke<int>();
 			}
@@ -30,8 +40,7 @@ namespace ranked
 
 		int bg_ai_system_enabled_stub()
 		{
-			const auto* game_type = game::Dvar_FindVar("g_gametype")->current.string;
-			if (!std::strcmp(game_type, "aliens") || !std::strcmp(game_type, "horde"))
+			if (!should_activate_bot_system())
 			{
 				return bg_ai_system_enabled_hook.invoke<int>();
 			}
@@ -41,8 +50,7 @@ namespace ranked
 
 		int bg_bot_fast_file_enabled_stub()
 		{
-			const auto* game_type = game::Dvar_FindVar("g_gametype")->current.string;
-			if (!std::strcmp(game_type, "aliens") || !std::strcmp(game_type, "horde"))
+			if (!should_activate_bot_system())
 			{
 				return bg_bot_fast_file_enabled_hook.invoke<int>();
 			}
@@ -52,8 +60,7 @@ namespace ranked
 
 		int bg_bots_using_team_difficulty_stub()
 		{
-			const auto* game_type = game::Dvar_FindVar("g_gametype")->current.string;
-			if (!std::strcmp(game_type, "aliens") || !std::strcmp(game_type, "horde"))
+			if (!should_activate_bot_system())
 			{
 				return bg_bots_using_team_difficulty_hook.invoke<int>();
 			}
@@ -86,7 +93,7 @@ namespace ranked
 				game::Dvar_RegisterBool("force_ranking", true, game::DVAR_FLAG_WRITE, "Force ranking");
 
 				// Fix sessionteam always returning none (SV_HasAssignedTeam_Internal)
-				utils::hook::set(0x140479CF0, 0xC300B0);
+				utils::hook::set<std::uint32_t>(0x140479CF0, 0xC300B0);
 			}
 
 			// Always run bots, even if xblive_privatematch is 0

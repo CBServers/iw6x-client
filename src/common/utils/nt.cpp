@@ -9,7 +9,7 @@ namespace utils::nt
 
 	library library::load(const std::filesystem::path& path)
 	{
-		return library::load(path.generic_string());
+		return load(path.generic_string());
 	}
 
 	library library::get_by_address(void* address)
@@ -76,7 +76,6 @@ namespace utils::nt
 		for (uint16_t i = 0; i < nt_headers->FileHeader.NumberOfSections; ++i, ++section)
 		{
 			if (section) headers.push_back(section);
-			else OutputDebugStringA("There was an invalid section :O");
 		}
 
 		return headers;
@@ -115,7 +114,7 @@ namespace utils::nt
 
 	std::string library::get_name() const
 	{
-		if (!this->is_valid()) return "";
+		if (!this->is_valid()) return {};
 
 		auto path = this->get_path();
 		const auto pos = path.find_last_of("/\\");
@@ -126,9 +125,9 @@ namespace utils::nt
 
 	std::string library::get_path() const
 	{
-		if (!this->is_valid()) return "";
+		if (!this->is_valid()) return {};
 
-		char name[MAX_PATH] = {0};
+		char name[MAX_PATH]{};
 		GetModuleFileNameA(this->module_, name, sizeof name);
 
 		return name;
@@ -136,7 +135,7 @@ namespace utils::nt
 
 	std::string library::get_folder() const
 	{
-		if (!this->is_valid()) return "";
+		if (!this->is_valid()) return {};
 
 		const auto path = std::filesystem::path(this->get_path());
 		return path.parent_path().generic_string();
@@ -217,6 +216,17 @@ namespace utils::nt
 		return nullptr;
 	}
 
+	bool is_wine()
+	{
+		static const auto has_wine_export = []() -> bool
+		{
+			const library ntdll("ntdll.dll");
+			return ntdll.get_proc<void*>("wine_get_version");
+		}();
+
+		return has_wine_export;
+	}
+
 	void raise_hard_exception()
 	{
 		int data = false;
@@ -238,7 +248,7 @@ namespace utils::nt
 
 	void relaunch_self()
 	{
-		const utils::nt::library self;
+		const library self;
 
 		STARTUPINFOA startup_info;
 		PROCESS_INFORMATION process_info;

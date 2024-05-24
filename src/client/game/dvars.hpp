@@ -28,6 +28,7 @@ namespace dvars
 	extern game::dvar_t* bg_surfacePenetration;
 
 	extern game::dvar_t* pm_bouncing;
+	extern game::dvar_t* pm_improvedMechanics;
 
 	extern game::dvar_t* player_sustainAmmo;
 
@@ -36,12 +37,21 @@ namespace dvars
 	extern game::dvar_t* jump_enableFallDamage;
 	extern game::dvar_t* jump_height;
 	extern game::dvar_t* jump_ladderPushVel;
+	extern game::dvar_t* jump_spreadAdd;
 
 	extern game::dvar_t* r_fullbright;
 
 	extern game::dvar_t* aimassist_enabled;
 
 	extern game::dvar_t* cg_legacyCrashHandling;
+
+	extern game::dvar_t* com_developer_script;
+	extern game::dvar_t** com_developer;
+
+	extern game::dvar_t* master_server_ip;
+	extern game::dvar_t* master_server_port;
+
+	extern game::dvar_t* ui_showBranding;
 
 	std::string dvar_get_vector_domain(int components, const game::dvar_limits& domain);
 	std::string dvar_get_domain(game::dvar_type type, const game::dvar_limits& domain);

@@ -9,11 +9,18 @@
 #include <utils/io.hpp>
 #include <utils/string.hpp>
 
-#include "component/motd.hpp"
 #include "component/filesystem.hpp"
 
 namespace demonware
 {
+	namespace
+	{
+		std::string get_motd_text()
+		{
+			return "Welcome to IW6x.";
+		}
+	}
+
 	bdStorage::bdStorage()
 	{
 		this->register_service(1, &bdStorage::set_legacy_user_file);
@@ -26,7 +33,7 @@ namespace demonware
 		this->register_service(11, &bdStorage::delete_user_file);
 		this->register_service(12, &bdStorage::get_user_file);
 
-		this->map_publisher_resource_variant("motd-.*\\.txt", motd::get_text);
+		this->map_publisher_resource_variant("motd-.*\\.txt", get_motd_text);
 		this->map_publisher_resource("newsfeed-.*\\.txt", "dw/newsfeed.txt", DW_NEWSFEED);
 		this->map_publisher_resource("mm\\.cfg", "dw/mm.cfg", DW_MM_CONFIG);
 		this->map_publisher_resource("playlists(_.+)?\\.aggr", "dw/playlists_tu14.aggr", DW_PLAYLISTS);

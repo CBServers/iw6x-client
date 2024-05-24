@@ -3,33 +3,38 @@
 #include "game/game.hpp"
 
 #include "console.hpp"
-#include "game_console.hpp"
 #include "command.hpp"
-
+#include "game_console.hpp"
 #include "rcon.hpp"
+#include "scheduler.hpp"
 
-#include <utils/thread.hpp>
 #include <utils/concurrency.hpp>
-#include <utils/flags.hpp>
 #include <utils/hook.hpp>
+#include <utils/thread.hpp>
 
 namespace console
 {
 	namespace
 	{
 		using message_queue = std::queue<std::string>;
-		utils::concurrency::container<message_queue> messages;
+		utils::concurrency::container<message_queue> message_queue_;
 
-		void hide_console()
+		std::atomic_bool started_{false};
+		std::atomic_bool terminate_runner_{false};
+
+		void print_message(const char* message)
 		{
-			auto* const con_window = GetConsoleWindow();
+#ifdef _DEBUG
+			OutputDebugStringA(message);
+#endif
 
-			DWORD process;
-			GetWindowThreadProcessId(con_window, &process);
-
-			if (process == GetCurrentProcessId() || IsDebuggerPresent())
+			if (game::is_headless())
 			{
-				ShowWindow(con_window, SW_HIDE);
+				std::fputs(message, stdout);
+			}
+			else
+			{
+				game::Conbuf_AppendText(message);
 			}
 		}
 
@@ -51,10 +56,43 @@ namespace console
 			}
 
 			game_console::print(type, message);
-			messages.access([&message](message_queue& msgs)
+
+			if (game::is_headless())
 			{
-				msgs.emplace(message);
+				std::fputs(message.data(), stdout);
+				return;
+			}
+
+			message_queue_.access([&message](message_queue& queue)
+			{
+				queue.emplace(message);
 			});
+		}
+
+		message_queue empty_message_queue()
+		{
+			message_queue current_queue{};
+
+			message_queue_.access([&](message_queue& queue)
+			{
+				current_queue = std::move(queue);
+				queue = {};
+			});
+
+			return current_queue;
+		}
+
+		void print_stub(const char* fmt, ...)
+		{
+			va_list ap;
+			va_start(ap, fmt);
+
+			char buffer[4096]{};
+			const auto res = vsnprintf_s(buffer, _TRUNCATE, fmt, ap);
+			(void)res;
+			print_message(buffer);
+
+			va_end(ap);
 		}
 
 		void append_text(const char* text)
@@ -68,50 +106,21 @@ namespace console
 	public:
 		component()
 		{
-			hide_console();
-
-			(void)_pipe(this->handles_, 1024, _O_TEXT);
-			(void)_dup2(this->handles_[1], 1);
-			(void)_dup2(this->handles_[1], 2);
-
-			//setvbuf(stdout, nullptr, _IONBF, 0);
-			//setvbuf(stderr, nullptr, _IONBF, 0);
-		}
-
-		void post_start() override
-		{
-			this->terminate_runner_ = false;
-
-			this->console_runner_ = utils::thread::create_named_thread("Console IO", [this]
+			if (game::is_headless())
 			{
-				this->runner();
-			});
-		}
+				if (!AttachConsole(ATTACH_PARENT_PROCESS))
+				{
+					AllocConsole();
+					AttachConsole(GetCurrentProcessId());
+				}
 
-		void pre_destroy() override
-		{
-			this->terminate_runner_ = true;
+				ShowWindow(GetConsoleWindow(), SW_SHOW);
 
-			printf("\r\n");
-			_flushall();
-
-			if (this->console_runner_.joinable())
-			{
-				this->console_runner_.join();
+				FILE* fp;
+				freopen_s(&fp, "CONIN$", "r", stdin);
+				freopen_s(&fp, "CONOUT$", "w", stdout);
+				freopen_s(&fp, "CONOUT$", "w", stderr);
 			}
-
-			if (this->console_thread_.joinable())
-			{
-				this->console_thread_.join();
-			}
-
-			_close(this->handles_[0]);
-			_close(this->handles_[1]);
-
-			messages.access([&](message_queue& msgs)
-			{
-				msgs = std::queue<std::string>();
-			});
 		}
 
 		void post_unpack() override
@@ -119,44 +128,51 @@ namespace console
 			// Redirect input (]command)
 			utils::hook::jump(SELECT_VALUE(0x14043DFA0, 0x140502A80), append_text);
 
-			this->initialize();
-		}
+			utils::hook::jump(printf, print_stub);
 
-	private:
-		volatile bool console_initialized_ = false;
-		volatile bool terminate_runner_ = false;
-
-		std::thread console_runner_;
-		std::thread console_thread_;
-
-		int handles_[2]{};
-
-		void initialize()
-		{
-			this->console_thread_ = utils::thread::create_named_thread("Console", [this]()
+			if (game::is_headless())
 			{
-				if (game::environment::is_dedi() || !utils::flags::has_flag("noconsole"))
+				return;
+			}
+
+			terminate_runner_ = false;
+
+			this->message_runner_ = utils::thread::create_named_thread("Console IO", []
+			{
+				while (!started_)
 				{
-					game::Sys_ShowConsole();
+					std::this_thread::sleep_for(10ms);
 				}
 
-				if (!game::environment::is_dedi())
+				while (!terminate_runner_)
 				{
-					// Hide that shit
-					ShowWindow(console::get_window(), SW_MINIMIZE);
-				}
+					std::string message_buffer{};
+					auto current_queue = empty_message_queue();
 
-				{
-					messages.access([&](message_queue&)
+					while (!current_queue.empty())
 					{
-						this->console_initialized_ = true;
-					});
-				}
+						const auto& msg = current_queue.front();
+						message_buffer.append(msg);
+						current_queue.pop();
+					}
 
-				MSG msg;
-				while (!this->terminate_runner_)
+					if (!message_buffer.empty())
+					{
+						print_message(message_buffer.data());
+					}
+
+					std::this_thread::sleep_for(5ms);
+				}
+			});
+
+			this->console_runner_ = utils::thread::create_named_thread("Console Window", [this]
+			{
+				game::Sys_ShowConsole();
+
+				MSG msg{};
+				while (!terminate_runner_)
 				{
-					if (PeekMessageA(&msg, nullptr, NULL, NULL, PM_REMOVE))
+					if (PeekMessageW(&msg, nullptr, NULL, NULL, PM_REMOVE))
 					{
 						if (msg.message == WM_QUIT)
 						{
@@ -165,67 +181,41 @@ namespace console
 						}
 
 						TranslateMessage(&msg);
-						DispatchMessage(&msg);
+						DispatchMessageW(&msg);
 					}
 					else
 					{
-						this->log_messages();
-						std::this_thread::sleep_for(1ms);
+						std::this_thread::sleep_for(5ms);
 					}
 				}
 			});
+
+			// Give the console a chance to open or we will lose some early messages
+			// like the ones printed from the filesystem component
+			scheduler::once([]() -> void
+			{
+				started_ = true;
+			}, scheduler::pipeline::main);
 		}
 
-		void log_messages()
+		void pre_destroy() override
 		{
-			if (this->console_initialized_ && !messages.get_raw().empty())
+			terminate_runner_ = true;
+
+			if (this->message_runner_.joinable())
 			{
-				std::queue<std::string> message_queue_copy;
-
-				{
-					messages.access([&](message_queue& msgs)
-					{
-						message_queue_copy = std::move(msgs);
-						msgs = std::queue<std::string>();
-					});
-				}
-
-				while (!message_queue_copy.empty())
-				{
-					log_message(message_queue_copy.front());
-					message_queue_copy.pop();
-				}
+				this->message_runner_.join();
 			}
 
-			fflush(stdout);
-			fflush(stderr);
-		}
-
-		static void log_message(const std::string& message)
-		{
-			OutputDebugStringA(message.data());
-			game::Conbuf_AppendText(message.data());
-		}
-
-		void runner()
-		{
-			char buffer[1024];
-
-			while (!this->terminate_runner_ && this->handles_[0])
+			if (this->console_runner_.joinable())
 			{
-				const auto len = _read(this->handles_[0], buffer, sizeof(buffer));
-				if (len > 0)
-				{
-					dispatch_message(con_type_info, std::string(buffer, len));
-				}
-				else
-				{
-					std::this_thread::sleep_for(1ms);
-				}
+				this->console_runner_.join();
 			}
-
-			std::this_thread::yield();
 		}
+
+	private:
+		std::thread console_runner_{};
+		std::thread message_runner_{};
 	};
 
 	HWND get_window()
@@ -235,7 +225,14 @@ namespace console
 
 	void set_title(std::string title)
 	{
-		SetWindowText(get_window(), title.data());
+		if (game::is_headless())
+		{
+			SetConsoleTitleA(title.data());
+		}
+		else
+		{
+			SetWindowTextA(get_window(), title.data());
+		}
 	}
 
 	void set_size(const int width, const int height)

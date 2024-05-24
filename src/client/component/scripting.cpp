@@ -2,13 +2,8 @@
 #include "loader/component_loader.hpp"
 #include "game/game.hpp"
 
-#include "game/scripting/entity.hpp"
 #include "game/scripting/functions.hpp"
-#include "game/scripting/event.hpp"
-#include "game/scripting/lua/engine.hpp"
-#include "game/scripting/execution.hpp"
 
-#include "scheduler.hpp"
 #include "scripting.hpp"
 
 #include "gsc/script_loading.hpp"
@@ -25,7 +20,6 @@ namespace scripting
 
 	namespace
 	{
-		utils::hook::detour vm_notify_hook;
 		utils::hook::detour scr_load_level_hook;
 		utils::hook::detour g_shutdown_game_hook;
 
@@ -43,31 +37,6 @@ namespace scripting
 		std::vector<std::function<void(int)>> shutdown_callbacks;
 		std::vector<std::function<void()>> init_callbacks;
 
-		void vm_notify_stub(const unsigned int notify_list_owner_id, const unsigned int string_value, game::VariableValue* top)
-		{
-			const auto* string = game::SL_ConvertToString(string_value);
-			if (string)
-			{
-				event e;
-				e.name = string;
-				e.entity = notify_list_owner_id;
-
-				for (auto* value = top; value->type != game::VAR_PRECODEPOS; --value)
-				{
-					e.arguments.emplace_back(*value);
-				}
-
-				if (e.name == "connected")
-				{
-					clear_entity_fields(e.entity);
-				}
-
-				lua::engine::notify(e);
-			}
-
-			vm_notify_hook.invoke<void>(notify_list_owner_id, string_value, top);
-		}
-
 		void scr_load_level_stub()
 		{
 			scr_load_level_hook.invoke<void>();
@@ -76,14 +45,10 @@ namespace scripting
 			{
 				callback();
 			}
-
-			lua::engine::start();
 		}
 
 		void g_shutdown_game_stub(const int free_scripts)
 		{
-			lua::engine::stop();
-
 			if (free_scripts)
 			{
 				script_function_table_sort.clear();
@@ -225,7 +190,6 @@ namespace scripting
 	public:
 		void post_unpack() override
 		{
-			vm_notify_hook.create(SELECT_VALUE(0x1403E29C0, 0x14043D9B0), &vm_notify_stub);
 			// SP address is wrong, but should be ok
 			scr_load_level_hook.create(SELECT_VALUE(0x14013D5D0, 0x1403C4E60), &scr_load_level_stub);
 			g_shutdown_game_hook.create(SELECT_VALUE(0x140318C10, 0x1403A0DF0), &g_shutdown_game_stub);
@@ -233,11 +197,6 @@ namespace scripting
 			scr_set_thread_position_hook.create(SELECT_VALUE(0x1403D3560, 0x14042E360), &scr_set_thread_position_stub);
 			process_script_hook.create(SELECT_VALUE(0x1403DC870, 0x1404378C0), &process_script_stub);
 			sl_get_canonical_string_hook.create(game::SL_GetCanonicalString, &sl_get_canonical_string_stub);
-
-			scheduler::loop([]
-			{
-				lua::engine::run_frame();
-			}, scheduler::pipeline::server);
 
 			if (!game::environment::is_sp())
 			{

@@ -1,6 +1,6 @@
 #include "http.hpp"
 #include <curl/curl.h>
-#include "finally.hpp"
+#include <gsl/gsl>
 
 #pragma comment(lib, "ws2_32.lib")
 
@@ -55,7 +55,7 @@ namespace utils::http
 			return {};
 		}
 
-		auto _ = utils::finally([&]()
+		auto _ = gsl::finally([&]
 		{
 			curl_slist_free_all(header_list);
 			curl_easy_cleanup(curl);

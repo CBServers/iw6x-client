@@ -19,10 +19,10 @@ namespace fastfiles
 		utils::hook::detour db_try_load_x_file_internal_hook;
 		utils::hook::detour db_find_x_asset_header_hook;
 
-		void db_try_load_x_file_internal(const char* zoneName, const int zone_flags, const int is_base_map)
+		void db_try_load_x_file_internal(const char* zone_name, const int zone_flags, const int is_base_map)
 		{
-			console::info("Loading fastfile %s\n", zoneName);
-			return db_try_load_x_file_internal_hook.invoke<void>(zoneName, zone_flags, is_base_map);
+			console::info("Loading fastfile %s\n", zone_name);
+			return db_try_load_x_file_internal_hook.invoke<void>(zone_name, zone_flags, is_base_map);
 		}
 
 		void dump_gsc_script(const std::string& name, game::XAssetHeader header)
@@ -84,6 +84,12 @@ namespace fastfiles
 			game::DB_XAssetPool[type] = new_pool;
 			game::g_poolSize[type] = new_size;
 		}
+
+		void p_mem_free_stub(const char* name, game::PMem_Direction alloc_dir)
+		{
+			console::info("Unloaded fastfile %s\n", name);
+			game::PMem_Free(name, alloc_dir);
+		}
 	}
 
 	void enum_assets(const game::XAssetType type, const std::function<void(game::XAssetHeader)>& callback, const bool include_override)
@@ -100,11 +106,13 @@ namespace fastfiles
 	public:
 		void post_unpack() override
 		{
-			db_try_load_x_file_internal_hook.create(
-				SELECT_VALUE(0x140275850, 0x1403237F0), &db_try_load_x_file_internal);
+			db_try_load_x_file_internal_hook.create(SELECT_VALUE(0x140275850, 0x1403237F0), &db_try_load_x_file_internal);
 
 			db_find_x_asset_header_hook.create(game::DB_FindXAssetHeader, db_find_x_asset_header_stub);
 			dvars::g_dump_scripts = game::Dvar_RegisterBool("g_dumpScripts", false, game::DVAR_FLAG_NONE, "Dump GSC scripts to binary format");
+
+			utils::hook::call(SELECT_VALUE(0x1402752DF, 0x140156350), p_mem_free_stub);
+			utils::hook::call(SELECT_VALUE(0x140276004, 0x140324259), p_mem_free_stub);
 
 			command::add("loadzone", [](const command::params& params)
 			{

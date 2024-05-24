@@ -3,6 +3,8 @@
 #include "seh.hpp"
 #include "tls.hpp"
 
+#include "game/game.hpp"
+
 #include <utils/string.hpp>
 #include <utils/hook.hpp>
 
@@ -153,7 +155,7 @@ void loader::load_exception_table(const utils::nt::library& target, const utils:
 
 	if (!RtlAddFunctionTable(function_list, entry_count, DWORD64(target.get_ptr())))
 	{
-		MessageBoxA(nullptr, "Setting exception handlers failed.", "Error", MB_OK | MB_ICONERROR);
+		game::show_error("Setting exception handlers failed.");
 	}
 
 	{
@@ -185,21 +187,12 @@ void loader::load_tls(const utils::nt::library& target, const utils::nt::library
 	if (source.get_optional_header()->DataDirectory[IMAGE_DIRECTORY_ENTRY_TLS].Size)
 	{
 		auto* target_tls = tls::allocate_tls_index();
-		/* target_tls = reinterpret_cast<PIMAGE_TLS_DIRECTORY>(library.get_ptr() + library.get_optional_header()
-				   ->DataDirectory[IMAGE_DIRECTORY_ENTRY_TLS].VirtualAddress); */
 		auto* const source_tls = reinterpret_cast<PIMAGE_TLS_DIRECTORY>(target.get_ptr() + source.get_optional_header()
 			->DataDirectory[IMAGE_DIRECTORY_ENTRY_TLS].VirtualAddress);
 
 		const auto tls_size = source_tls->EndAddressOfRawData - source_tls->StartAddressOfRawData;
 		const auto tls_index = *reinterpret_cast<DWORD*>(target_tls->AddressOfIndex);
 		*reinterpret_cast<DWORD*>(source_tls->AddressOfIndex) = tls_index;
-
-		// I made sure it's large enough for IW6.
-		/*if (tls_size > TLS_PAYLOAD_SIZE)
-		{
-			throw std::runtime_error(utils::string::va(
-				"TLS data is of size 0x%X, but we have only reserved 0x%X bytes!", tls_size, TLS_PAYLOAD_SIZE));
-		}*/
 
 		DWORD old_protect;
 		VirtualProtect(PVOID(target_tls->StartAddressOfRawData),

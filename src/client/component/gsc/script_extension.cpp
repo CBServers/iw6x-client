@@ -1,16 +1,15 @@
 #include <std_include.hpp>
 #include "loader/component_loader.hpp"
 #include "game/game.hpp"
-#include "game/scripting/execution.hpp"
-#include "game/scripting/function.hpp"
+#include "game/dvars.hpp"
+
 #include "game/scripting/functions.hpp"
-#include "game/scripting/lua/error.hpp"
 
 #include <utils/hook.hpp>
 #include <utils/string.hpp>
+#include <utils/io.hpp>
 
 #include "component/console.hpp"
-#include "component/scripting.hpp"
 #include "component/notifies.hpp"
 #include "component/command.hpp"
 
@@ -24,8 +23,6 @@ namespace gsc
 	std::uint16_t method_id_start = 0x8429;
 
 	void* func_table[0x1000];
-
-	const game::dvar_t* developer_script = nullptr;
 
 	namespace
 	{
@@ -51,16 +48,6 @@ namespace gsc
 			}
 
 			return result;
-		}
-
-		scripting::script_value get_argument(int index)
-		{
-			if (static_cast<std::uint32_t>(index) >= game::scr_VmPub->outparamcount)
-			{
-				throw gsc_error(std::format("Parameter {} does not exist", index + 1));
-			}
-
-			return {game::scr_VmPub->top[-index]};
 		}
 
 		void execute_custom_function(game::BuiltinFunction function)
@@ -147,7 +134,7 @@ namespace gsc
 
 		void vm_error_stub(int mark_pos)
 		{
-			if (!developer_script->current.enabled && !force_error_print)
+			if (!dvars::com_developer_script->current.enabled && !force_error_print)
 			{
 				utils::hook::invoke<void>(0x1404E4D00, mark_pos);
 				return;
@@ -241,6 +228,25 @@ namespace gsc
 		{
 			scr_error(utils::string::va("Assert fail: %s", game::Scr_GetString(0)));
 		}
+
+		const char* get_code_pos(const int index)
+		{
+			if (static_cast<unsigned int>(index) >= game::scr_VmPub->outparamcount)
+			{
+				scr_error("Scr_GetCodePos: index is out of range");
+				return "";
+			}
+
+			const auto* value = &game::scr_VmPub->top[-index];
+
+			if (value->type != game::VAR_FUNCTION)
+			{
+				scr_error("Scr_GetCodePos requires a function as parameter");
+				return "";
+			}
+
+			return value->u.codePosValue;
+		}
 	}
 
 	void add_function(const std::string& name, game::BuiltinFunction function)
@@ -277,8 +283,6 @@ namespace gsc
 				return;
 			}
 
-			developer_script = game::Dvar_RegisterBool("developer_script", false, game::DVAR_FLAG_NONE, "Enable developer script comments");
-
 			utils::hook::nop(0x14043BBBE + 5, 2);
 			utils::hook::call(0x14043BBBE, vm_call_builtin_function);
 
@@ -290,38 +294,25 @@ namespace gsc
 			utils::hook::set<game::BuiltinFunction>(0x1409E6E50, assert_msg_cmd);
 			utils::hook::set<game::BuiltinFunction>(0x1409E6E20, assert_cmd);
 
-			add_function("getfunction", []
-			{
-				const auto* filename = game::Scr_GetString(0);
-				const auto* function = game::Scr_GetString(1);
-
-				if (scripting::script_function_table[filename].contains(function))
-				{
-					const auto func = scripting::function{scripting::script_function_table[filename][function]};
-					add_code_pos(func.get_pos());
-					return;
-				}
-
-				throw gsc_error("Function not found");
-			});
-
 			add_function("replacefunc", []
 			{
-				const auto what = get_argument(0).get_raw();
-				const auto with = get_argument(1).get_raw();
-
-				if (what.type != game::VAR_FUNCTION || with.type != game::VAR_FUNCTION)
+				if (scr_get_type(0) != game::VAR_FUNCTION || scr_get_type(1) != game::VAR_FUNCTION)
 				{
 					throw gsc_error("Parameter must be a function");
 				}
 
-				notifies::set_gsc_hook(what.u.codePosValue, with.u.codePosValue);
+				notifies::set_gsc_hook(get_code_pos(0), get_code_pos(1));
 			});
 
 			add_function("executecommand", []
 			{
-				const auto cmd = get_argument(0).as<std::string>();
+				const auto* cmd = game::Scr_GetString(0);
 				command::execute(cmd);
+			});
+
+			add_function("isdedicated", []
+			{
+				game::Scr_AddInt(game::environment::is_dedi());
 			});
 		}
 	};

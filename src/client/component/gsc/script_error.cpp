@@ -71,10 +71,9 @@ namespace gsc
 			return scripting::get_token(id);
 		}
 
-		void get_unknown_function_error(const char* code_pos)
+		void get_unknown_function_error(char* code_pos)
 		{
-			const auto function = find_function(code_pos);
-			if (function.has_value())
+			if (const auto function = find_function(code_pos); function.has_value())
 			{
 				const auto& pos = function.value();
 				unknown_function_error = std::format(
@@ -97,7 +96,7 @@ namespace gsc
 			);
 		}
 
-		void compile_error_stub(const char* code_pos, [[maybe_unused]] const char* msg)
+		void compile_error_stub(char* code_pos, [[maybe_unused]] const char* msg)
 		{
 			get_unknown_function_error(code_pos);
 			game::Com_Error(game::ERR_DROP, "script link error\n%s", unknown_function_error.data());

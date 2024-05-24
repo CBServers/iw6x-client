@@ -60,54 +60,6 @@ namespace patches
 			return com_register_dvars_hook.invoke<void>();
 		}
 
-		utils::hook::detour dvar_register_int_hook;
-
-		game::dvar_t* dvar_register_int(const char* name, int value, const int min, const int max,
-		                                const unsigned int flags,
-		                                const char* description)
-		{
-			// enable map selection in extinction
-			if (!strcmp(name, "extinction_map_selection_enabled"))
-			{
-				value = true;
-			}
-
-				// enable extra loadouts
-			else if (!strcmp(name, "extendedLoadoutsEnable"))
-			{
-				value = true;
-			}
-
-				// show all in-game store items
-			else if (strstr(name, "igs_"))
-			{
-				value = true;
-			}
-
-			return dvar_register_int_hook.invoke<game::dvar_t*>(name, value, min, max, flags, description);
-		}
-
-		game::dvar_t* register_fovscale_stub(const char* name, float /*value*/, float /*min*/, float /*max*/,
-		                                     unsigned int /*flags*/,
-		                                     const char* desc)
-		{
-			// changed max value from 2.0f -> 5.0f and min value from 0.5f -> 0.1f
-			return game::Dvar_RegisterFloat(name, 1.0f, 0.1f, 5.0f, game::DvarFlags::DVAR_FLAG_SAVED, desc);
-		}
-
-		game::dvar_t* register_cg_gun_dvars(const char* name, float /*value*/, float /*min*/, float /*max*/,
-		                                    unsigned int /*flags*/, const char* desc)
-		{
-			if (name == "cg_gun_x"s)
-			{
-				return game::Dvar_RegisterFloat(name, 0.0f, -1.0f, 2.0f, game::DvarFlags::DVAR_FLAG_SAVED, desc);
-			}
-			else
-			{
-				return game::Dvar_RegisterFloat(name, 0.0f, 0.0f, 0.0f, game::DvarFlags::DVAR_FLAG_NONE, desc);
-			}
-		}
-
 		game::dvar_t* register_network_fps_stub(const char* name, int, int, int, unsigned int flags,
 		                                        const char* desc)
 		{
@@ -180,14 +132,14 @@ namespace patches
 			{
 				if (args.size() == 1)
 				{
-					const auto current = game::Dvar_ValueToString(dvar, dvar->current);
-					const auto reset = game::Dvar_ValueToString(dvar, dvar->reset);
-					console::info("\"%s\" is: \"%s^7\" default: \"%s^7\"\n", dvar->name, current, reset);
+					const std::string current = game::Dvar_ValueToString(dvar, dvar->current);
+					const std::string reset = game::Dvar_ValueToString(dvar, dvar->reset);
+					console::info("\"%s\" is: \"%s^7\" default: \"%s^7\"\n", dvar->name, current.data(), reset.data());
 					console::info("   %s\n", dvars::dvar_get_domain(dvar->type, dvar->domain).data());
 				}
 				else
 				{
-					char command[0x1000] = {0};
+					char command[0x1000]{};
 					game::Dvar_GetCombinedString(command, 1);
 					game::Dvar_SetCommand(args.get(0), command);
 				}
@@ -220,7 +172,7 @@ namespace patches
 
 		void bsp_sys_error_stub(const char* error, const char* arg1)
 		{
-			if (game::environment::is_dedi() || game::environment::is_linker())
+			if (game::environment::is_dedi())
 			{
 				game::Sys_Error(error, arg1);
 			}
@@ -280,7 +232,7 @@ namespace patches
 			LoadLibraryA("PhysXUpdateLoader64.dll");
 
 			// Unlock fps in main menu
-			utils::hook::set<BYTE>(SELECT_VALUE(0x140242DDB, 0x1402CF58B), 0xEB);
+			utils::hook::set<std::uint8_t>(SELECT_VALUE(0x140242DDB, 0x1402CF58B), 0xEB);
 
 			// Unlock cg_fov
 			utils::hook::call(SELECT_VALUE(0x1401F3E96, 0x14027273C), register_cg_fov_stub);
@@ -289,14 +241,10 @@ namespace patches
 				utils::hook::call(0x1401F3EC7, register_cg_fov_stub);
 			}
 
-			// set it to 3 to display both voice dlc announcers did only show 1
-			game::Dvar_RegisterInt("igs_announcer", 3, 3, 3, game::DvarFlags::DVAR_FLAG_NONE,
-			                       "Show Announcer Packs. (Bitfield representing which announcer paks to show)");
-
 			// changed max value from 85 -> 1000
-			if (!game::environment::is_dedi() && !game::environment::is_linker())
+			if (!game::environment::is_dedi())
 			{
-				game::Dvar_RegisterInt("com_maxfps", 85, 0, 1000, game::DvarFlags::DVAR_FLAG_SAVED, "Cap frames per second");
+				dvars::override::register_int("com_maxfps", 85, 0, 1000, game::DVAR_FLAG_SAVED);
 			}
 
 			if (!game::environment::is_sp())
@@ -307,12 +255,12 @@ namespace patches
 
 			// register cg_gun_ dvars with new values and flags
 			// maybe _x can stay usable within a reasonable range? it can make scoped weapons DRASTICALLY better on high FOVs
-			utils::hook::call(SELECT_VALUE(0x140228DDE, 0x1402AB04C), register_cg_gun_dvars);
-			utils::hook::call(SELECT_VALUE(0x140228E0E, 0x1402AB07C), register_cg_gun_dvars);
-			utils::hook::call(SELECT_VALUE(0x140228E3E, 0x1402AB0AC), register_cg_gun_dvars);
+			dvars::override::register_float("cg_gun_x", 0.0f, -1.0f, 2.0f, game::DVAR_FLAG_SAVED);
+			dvars::override::register_float("cg_gun_y", 0.0f, 0.0f, 0.0f, game::DVAR_FLAG_NONE);
+			dvars::override::register_float("cg_gun_z", 0.0f, 0.0f, 0.0f, game::DVAR_FLAG_NONE);
 
 			// Register cg_fovscale with new params
-			utils::hook::call(SELECT_VALUE(0x140317079, 0x140272777), register_fovscale_stub);
+			dvars::override::register_float("cg_fovScale", 1.0f, 0.1f, 5.0f, game::DVAR_FLAG_SAVED);
 
 			// Patch Dvar_Command to print out values how CoD4 does it
 			utils::hook::jump(SELECT_VALUE(0x1403BFCB0, 0x140416A60), dvar_command_patch);
@@ -320,8 +268,7 @@ namespace patches
 			// Allow executing custom cfg files with the "exec" command
 			utils::hook::jump(SELECT_VALUE(0x1403B39BB, 0x1403F752B), SELECT_VALUE(0x1403B3A12, 0x1403F7582));
 			//Use a relative jump to empty memory first
-			utils::hook::jump(SELECT_VALUE(0x1403B3A12, 0x1403F7582), SELECT_VALUE(cmd_exec_stub_sp, cmd_exec_stub_mp),
-			                  true);
+			utils::hook::jump(SELECT_VALUE(0x1403B3A12, 0x1403F7582), SELECT_VALUE(cmd_exec_stub_sp, cmd_exec_stub_mp), true);
 			// Use empty memory to go to our stub first (can't do close jump, so need space for 12 bytes)
 
 			// Fix mouse lag
@@ -330,10 +277,6 @@ namespace patches
 			{
 				SetThreadExecutionState(ES_DISPLAY_REQUIRED);
 			}, scheduler::pipeline::main);
-
-			// Allow kbam input when gamepad is enabled
-			utils::hook::nop(SELECT_VALUE(0x14023D490, 0x1402C3099), 2);
-			utils::hook::nop(SELECT_VALUE(0x14023B3AC, 0x1402C0CE0), 6);
 
 			if (game::environment::is_sp())
 			{
@@ -365,7 +308,23 @@ namespace patches
 			utils::hook::set(0x140599890, 0xC301B0); // Entitlements_IsIDUnlocked
 
 			// Enable DLC items, extra loadouts and map selection in extinction
-			dvar_register_int_hook.create(0x1404EE270, &dvar_register_int);
+			dvars::override::register_int("extinction_map_selection_enabled", 1, 0, 1, 0);
+			dvars::override::register_int("extendedLoadoutsEnable", 1, 0, 1, 0);
+			dvars::override::register_int("igs_announcer", 3, 3, 3, 0);
+			dvars::override::register_int("igs_swp", 1, 0, 1, 0);
+			dvars::override::register_int("igs_shp", 1, 0, 1, 0);
+			dvars::override::register_int("igs_svp", 1, 0, 1, 0);
+			dvars::override::register_int("igs_sve", 1, 0, 1, 0);
+			dvars::override::register_int("igs_svs", 1, 0, 1, 0);
+			dvars::override::register_int("igs_svr", 1, 0, 1, 0);
+			dvars::override::register_int("igs_swap", 1, 0, 1, 0);
+			dvars::override::register_int("igs_fo", 1, 0, 1, 0);
+			dvars::override::register_int("igs_td", 1, 0, 1, 0);
+			dvars::override::register_int("igs_sripper", 1, 0, 1, 0);
+			dvars::override::register_int("igs_smappacks", 1, 0, 1, 0);
+			dvars::override::register_int("igs_sosp", 1, 0, 1, 0);
+			dvars::override::register_int("igs_s1", 1, 0, 1, 0);
+			dvars::override::register_int("igs_crossgame", 1, 0, 1, 0);
 
 			// Patch game chat on resolutions higher than 1080p to use the right font
 			utils::hook::call(0x14025C825, get_chat_font_handle);
@@ -373,7 +332,7 @@ namespace patches
 			utils::hook::call(0x1402C3699, get_chat_font_handle);
 
 			dvars::aimassist_enabled = game::Dvar_RegisterBool("aimassist_enabled", true,
-			                                                   game::DvarFlags::DVAR_FLAG_SAVED,
+			                                                   game::DVAR_FLAG_SAVED,
 			                                                   "Enables aim assist for controllers");
 			// Client side aim assist dvar
 			utils::hook::call(0x14013B9AC, aim_assist_add_to_target_list);

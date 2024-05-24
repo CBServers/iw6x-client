@@ -6,6 +6,8 @@ if (package.loaded["LUI.mp_hud.OptionsMenu"] == nil) then
 	return
 end
 
+game:addlocalizedstring("LUA_MENU_QUIT_TO_DESKTOP_CAPS", "QUIT TO DESKTOP")
+
 package.loaded["LUI.mp_hud.OptionsMenu"].options_def = function()
 	local f14_local0 = GameX.GetGameMode()
 	local f14_local1 = Engine.TableLookup( GameTypesTable.File, GameTypesTable.Cols.Ref, f14_local0, GameTypesTable.Cols.ClassChoice ) == "1"
@@ -90,12 +92,23 @@ package.loaded["LUI.mp_hud.OptionsMenu"].options_def = function()
 
 	LUI.MenuBuilder.BuildAddChild(self, {
 		type = "UIGenericButton",
-		id = "btn_MPPause_5",
+		id = "btn_MPPause_4",
 		properties = {
-			childNum = 6,
+			childNum = 5,
 			button_text = Engine.Localize( "@LUA_MENU_END_GAME_CAPS" ),
 			button_action_func = LUI.mp_hud.OptionsMenu.endGameButtonAction
 		}
 	})
+
+	LUI.MenuBuilder.BuildAddChild(self, {
+		type = "UIGenericButton",
+		id = "btn_MPPause_5",
+		properties = {
+			childNum = 6,
+			button_text = Engine.Localize( "@LUA_MENU_QUIT_TO_DESKTOP_CAPS" ),
+			button_action_func = MBh.PopupMenu( "quit_popmenu", false, false )
+		}
+	})
+
 	return self
 end

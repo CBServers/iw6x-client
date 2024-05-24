@@ -6,8 +6,6 @@
 #include <utils/flags.hpp>
 #include <updater/_updater.hpp>
 
-
-
 namespace updater
 {
 	void update()
@@ -34,7 +32,6 @@ namespace updater
 	class component final : public component_interface
 	{
 	public:
-
 		void pre_destroy() override
 		{
 			join();

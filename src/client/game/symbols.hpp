@@ -56,8 +56,11 @@ namespace game
 	WEAK symbol<int(XAssetType type, const char* name)> DB_IsXAssetDefault{0x140273480 , 0x1403204D0};
 	WEAK symbol<int(const RawFile* rawfile)> DB_GetRawFileLen{0x0140272E80, 0x14031FF80};
 	WEAK symbol<void(const RawFile* rawfile, char* buf, int size)> DB_GetRawBuffer{0x140272D50, 0x14031FE50};
+	WEAK symbol<int(const char* zoneName)> DB_IsLocalized{0x140273210, 0x140320360};
 
 	WEAK symbol<void*(unsigned int size, unsigned int alignment, unsigned int type, PMem_Source source)> PMem_AllocFromSource_NoDebug{0x0140430B80, 0x001404F46C0};
+	WEAK symbol<void(const char* name, PMem_Direction allocDir)> PMem_Free{0x140430EC0 , 0x1404F4A30};
+
 	WEAK symbol<void*(unsigned int size)> Hunk_AllocateTempMemoryHighInternal{0x140423C70, 0x1404E4E20};
 
 	WEAK symbol<dvar_t*(const char* name)> Dvar_FindVar{0x140429E70, 0x1404ECB60};
@@ -101,8 +104,8 @@ namespace game
 	                          const char* errormsg)> G_FindConfigstringIndex{0x0, 0x140161F90};
 	WEAK symbol<int(int server_time)> G_RunFrame{0x0, 0x1403A05E0};
 
-	WEAK symbol<bool(game::pmove_t* pm)> PM_Weapon_InValidChangeWeaponState{0x0, 0x140233E20};
-	WEAK symbol<void(mp::playerState_s* ps)> BG_ClearDropWeaponAnim{0x0, 0x14020B500};
+	WEAK symbol<bool(game::pmove_t* pm)> PM_Weapon_InValidChangeWeaponState{ 0x0, 0x140233E20 };
+	WEAK symbol<void(mp::playerState_s* ps)> BG_ClearDropWeaponAnim{ 0x0, 0x14020B500 };
 
 	WEAK symbol<game_hudelem_s*(int clientNum, int teamNum)> HudElem_Alloc{0x0, 0x1403997E0};
 
@@ -167,13 +170,16 @@ namespace game
 	WEAK symbol<const float*(const float* v)> Scr_AllocVector{0x1403D9AF0, 0x140434A10};
 	WEAK symbol<const char*(unsigned int index)> Scr_GetString{0, 0x140439160};
 	WEAK symbol<void(int value)> Scr_AddInt{0x0, 0x140437E70};
+	WEAK symbol<void(const char* value)> Scr_AddString{0x0, 0x1404381D0};
 	WEAK symbol<int(unsigned int index)> Scr_GetInt{0x0, 0x140438E10};
 	WEAK symbol<float(unsigned int index)> Scr_GetFloat{0, 0x140438D60};
 	WEAK symbol<unsigned int()> Scr_GetNumParam{0x1403DDF60, 0x140438EC0};
 	WEAK symbol<void()> Scr_ClearOutParams{0x1403DD500, 0x140438600};
 	WEAK symbol<scr_entref_t(unsigned int entId)> Scr_GetEntityIdRef{0x1403DBDC0, 0x140436E10};
+	WEAK symbol<void(int entnum, unsigned int classnum)> Scr_AddEntityNum{0x0, 0x140437F60};
 	WEAK symbol<int(unsigned int classnum, int entnum, int offset)> Scr_SetObjectField{0x140350E70, 0x1403D3FE0};
 	WEAK symbol<void(unsigned int id, unsigned int stringValue, unsigned int paramcount)> Scr_NotifyId{0x1403DE730, 0x140439700};
+	WEAK symbol<void(unsigned int stringValue, unsigned int paramcount)> Scr_NotifyLevel{0x0, 0x1404397D0};
 	WEAK symbol<unsigned int(int entnum, unsigned int classnum)> Scr_GetEntityId{0x0, 0x140436D60};
 	WEAK symbol<bool(VariableValue* value)> Scr_CastString{0x0, 0x140434AC0};
 
@@ -225,6 +231,7 @@ namespace game
 	WEAK symbol<bool(int, void const*, const netadr_s*)> Sys_SendPacket{0x14043D000, 0x140501A00};
 	WEAK symbol<void*(int valueIndex)> Sys_GetValue{0x1403C2C30, 0x1404237D0};
 	WEAK symbol<bool()> Sys_IsMainThread{0x1478FC470, 0x140423950};
+	WEAK symbol<HANDLE(Sys_Folder folder, const char* baseFilename)> Sys_CreateFile{0x140434B10, 0x1404F8FD0};
 
 	WEAK symbol<void()> SwitchToCoreMode{0, 0x1401FA4A0};
 	WEAK symbol<void()> SwitchToAliensMode{0, 0x1401FA4D0};
@@ -274,6 +281,8 @@ namespace game
 	WEAK symbol<int> g_poolSize{0x14086DBB0, 0x1409E4E20};
 	// g_assetEntryPool
 	WEAK symbol<const char*> g_assetNames{0x14086CA40, 0x1409E40C0};
+
+	WEAK symbol<DB_LoadData> g_load{0x1418CF4A0, 0x141EEFBA0};
 
 	WEAK symbol<WinVars_t> g_wv{0x145A7BAD0, 0x147AD2630};
 	WEAK symbol<WinMouseVars_t> s_wmv{0x145A73750, 0x147AC9D78};
