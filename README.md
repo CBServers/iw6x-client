@@ -5,11 +5,11 @@
 
 
 # IW6x: Client
-This is a fork of IW6x/[iw6-mod](https://git.alterware.dev/AlterWare/iw6-mod)
+This is a fork of IW6x/[iw6-mod](https://git.alterware.dev/AlterWare/iw6-mod).
 
 Originally developed by [AlterWare](https://alterware.dev) and [X Labs](https://xlabs.dev/).
 
-Thanks to the all orginal contributors.
+Thanks to the all original contributors.
 
 <p align="center">
   <img alig src="assets/github/banner.png?raw=true"/>
