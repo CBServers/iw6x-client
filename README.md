@@ -1,37 +1,25 @@
-![license](https://img.shields.io/github/license/XLabsProject/iw6x-client.svg)
-[![open bugs](https://img.shields.io/github/issues/XLabsProject/iw6x-client/bug?label=bugs)](https://github.com/XLabsProject/iw6x-client/issues?q=is%3Aissue+is%3Aopen+label%3Abug)
-[![build](https://github.com/XLabsProject/iw6x-client/workflows/Build/badge.svg)](https://github.com/XLabsProject/iw6x-client/actions)
-[![patreon](https://img.shields.io/badge/patreon-support-blue.svg?logo=patreon)](https://www.patreon.com/xlabsproject)
-[![discord](https://img.shields.io/endpoint?url=https://momo5502.com/iw4x/members-badge.php)](https://discord.gg/sKeVmR3)
+![license](https://img.shields.io/github/license/CBServers/iw6x-client.svg)
+[![build](https://img.shields.io/github/actions/workflow/status/CBServers/iw6x-client/build.yml?branch=main&label=Build&logo=github)](https://github.com/CBServers/iw6x-client/actions)
+[![bugs](https://img.shields.io/github/issues/CBServers/iw6x-client/bug?label=Bugs)](https://github.com/CBServers/iw6x-client/issues?q=is%3Aissue+is%3Aopen+label%3Abug)
+[![website](https://img.shields.io/badge/CBServers-Website-blue)](https://cbservers.xyz)
 
 
 # IW6x: Client
+This is a fork of IW6x/[iw6-mod](https://git.alterware.dev/AlterWare/iw6-mod)
+
+Originally developed by [AlterWare](https://alterware.dev) and [X Labs](https://xlabs.dev/).
+
+Thanks to the all orginal contributors.
 
 <p align="center">
   <img alig src="assets/github/banner.png?raw=true"/>
 </p>
 
-<br/>
-
 ## Download
 
-- **[Click here to get the latest release](https://ci.appveyor.com/api/projects/XLabsProject/iw6x-client/artifacts/build%2Fbin%2Fx64%2FRelease%2Fiw6x.exe?branch=master&job=Environment%3A%20APPVEYOR_BUILD_WORKER_IMAGE%3DVisual%20Studio%202019%2C%20PREMAKE_ACTION%3Dvs2019%2C%20CI%3D1%3B%20Configuration%3A%20Release)** (if you are a tester or X Labs staff, get the develop build [here](https://ci.appveyor.com/api/projects/XLabsProject/iw6x-client/artifacts/build%2Fbin%2Fx64%2FRelease%2Fiw6x.exe?branch=develop&job=Environment%3A%20APPVEYOR_BUILD_WORKER_IMAGE%3DVisual%20Studio%202019%2C%20PREMAKE_ACTION%3Dvs2019%2C%20CI%3D1%3B%20Configuration%3A%20Release))
+- **[Click here to get the latest release](https://github.com/CBServers/updater/raw/main/updater/iw6x/iw6x.exe)**
 - **You will need to drop this in your Call of Duty: Ghosts installation folder. If you don't have Call of Duty: Ghosts, get those game files first.**
 - The client is still in an early stage. It will have bugs!
-
-<br/>
-
-## Showcase
-
-| <img src="https://cdn.discordapp.com/attachments/768362250334765067/773279641540231259/iw6x-release.PNG" /> | <img src="https://pbs.twimg.com/media/EmTRxMJWEAIF6a9?format=jpg&name=large" /> |
-|:-:|:-:|
-| Server list | Scripting support |
-
-| <img src="https://user-images.githubusercontent.com/45299104/101917488-9721ba00-3bc8-11eb-9a2f-11edeff1dda4.jpg" /> |
-|:-:|
-| Ultrawide monitor support |
-
-<br/>
 
 ## Compile from source
 
@@ -46,12 +34,9 @@
 | `--copy-to=PATH`            | Optional, copy the EXE to a custom folder after build, define the path here if wanted. |
 | `--dev-build`               | Enable development builds of the client. |
 
-<br/>
-
 ## Disclaimer
 
 This software has been created purely for the purposes of
 academic research. It is not intended to be used to attack
 other systems. Project maintainers are not responsible or
 liable for misuse of the software. Use responsibly.
-
