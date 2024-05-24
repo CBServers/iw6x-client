@@ -45,11 +45,11 @@ namespace branding
 			ui_get_formatted_build_number_hook.create(
 				SELECT_VALUE(0x140415FD0, 0x1404D7C00), ui_get_formatted_build_number_stub);
 
-			dvars::ui_showBranding = game::Dvar_RegisterBool("ui_showBranding", false, game::DVAR_FLAG_SAVED, "Show IW6x branding at the top left");
+			dvars::ui_showBranding = game::Dvar_RegisterBool("ui_showBranding", false, game::DVAR_FLAG_SAVED, "Show IW6x branding at the top left in-game");
 
 			scheduler::loop([]()
 			{
-				if (dvars::ui_showBranding && !dvars::ui_showBranding->current.enabled)
+				if (dvars::ui_showBranding && !dvars::ui_showBranding->current.enabled && game::CL_IsCgameInitialized())
 				{
 					return;
 				}

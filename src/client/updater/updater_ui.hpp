@@ -4,6 +4,7 @@
 
 #include <utils/concurrency.hpp>
 #include <utils/progress_ui.hpp>
+#include <game/game.hpp>
 
 namespace updater
 {
