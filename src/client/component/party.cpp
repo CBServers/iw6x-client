@@ -191,6 +191,37 @@ namespace party
 		network::send(target, "getInfo", connect_state.challenge);
 	}
 
+	void start_map(const std::string& map_name)
+	{
+		if (game::Live_SyncOnlineDataFlags(0) != 0)
+		{
+			scheduler::on_game_initialized([map_name]
+			{
+				command::execute(std::format("map {}", map_name), false);
+			}, scheduler::pipeline::main, 1s);
+
+			return;
+		}
+
+		party::switch_gamemode_if_necessary(dvars::get_string("g_gametype"));
+
+		if (!game::environment::is_dedi())
+		{
+			perform_game_initialization();
+		}
+
+		const auto* current_mapname = game::Dvar_FindVar("mapname");
+		if (current_mapname && utils::string::to_lower(current_mapname->current.string) == utils::string::to_lower(map_name) && game::SV_Loaded())
+		{
+			console::info("Restarting map: %s\n", map_name.data());
+			command::execute("map_restart", false);
+			return;
+		}
+
+		console::info("Starting map: %s\n", map_name.data());
+		game::SV_StartMapForParty(0, map_name.data(), false, false);
+	}
+
 	void didyouknow_stub(game::dvar_t* dvar, const char* string)
 	{
 		if (dvar->name == "didyouknow"s && !party::sv_motd.empty())
@@ -226,11 +257,42 @@ namespace party
 
 			didyouknow_hook.create(game::Dvar_SetString, didyouknow_stub);
 
+			command::add("map", [](const command::params& params)
+			{
+				if (params.size() != 2)
+				{
+					return;
+				}
+
+				start_map(utils::string::to_lower(params[1]));
+			});
+
+			command::add("map_restart", []
+			{
+				if (!game::SV_Loaded())
+				{
+					return;
+				}
+
+				*reinterpret_cast<int*>(0x144DB8C84) = 1; // sv_map_restart
+				*reinterpret_cast<int*>(0x144DB8C88) = 1; // sv_loadScripts
+				*reinterpret_cast<int*>(0x144DB8C8C) = 0; // sv_migrate
+				reinterpret_cast<void(*)()>(0x14046F3B0)(); // SV_CheckLoadGame
+			});
+
+			command::add("fast_restart", []
+			{
+				if (game::SV_Loaded())
+				{
+					game::SV_FastRestart();
+				}
+			});
+
 			command::add("reconnect", []([[maybe_unused]] const command::params& params)
 			{
 				if (!connect_state.hostDefined)
 				{
-					console::info("Cannot connect to server.\n");
+					console::error("Cannot connect to server.\n");
 					return;
 				}
 				
@@ -442,35 +504,45 @@ namespace party
 
 				if (info.get("challenge") != connect_state.challenge)
 				{
-					console::info("Invalid challenge.\n");
+					const auto* error_msg = "Invalid challenge.";
+					console::error("%s\n", error_msg);
+					game::Com_Error(game::ERR_DROP, "%s", error_msg);
 					return;
 				}
 
 				const auto mapname = info.get("mapname");
 				if (mapname.empty())
 				{
-					console::info("Invalid map.\n");
+					const auto* error_msg = "Invalid map.";
+					console::error("%s\n", error_msg);
+					game::Com_Error(game::ERR_DROP, "%s", error_msg);
 					return;
 				}
 
 				const auto game_type = info.get("gametype");
 				if (game_type.empty())
 				{
-					console::info("Invalid gametype.\n");
+					const auto* error_msg = "Invalid gametype.";
+					console::error("%s\n", error_msg);
+					game::Com_Error(game::ERR_DROP, "%s", error_msg);
 					return;
 				}
 
 				const auto game_name = info.get("gamename");
 				if (game_name != "IW6"s)
 				{
-					console::info("Invalid gamename.\n");
+					const auto* error_msg = "Invalid gamename.";
+					console::error("%s\n", error_msg);
+					game::Com_Error(game::ERR_DROP, "%s", error_msg);
 					return;
 				}
 
 				const auto is_private = info.get("isPrivate");
 				if (is_private == "1"s && dvars::get_string("password").empty())
 				{
-					console::info("Password is not set.\n");
+					const auto* error_msg = "Password is not set.";
+					console::error("%s\n", error_msg);
+					game::Com_Error(game::ERR_DROP, "%s", error_msg);
 					return;
 				}
 
