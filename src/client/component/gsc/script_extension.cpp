@@ -400,7 +400,7 @@ namespace gsc
 			{
 				const auto* path = game::Scr_GetString(0);
 				const auto converted_path = convert_path(path);
-				game::Scr_AddInt(utils::io::remove_file(path));
+				game::Scr_AddInt(utils::io::remove_file(converted_path));
 			});
 		}
 	};
