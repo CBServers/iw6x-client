@@ -39,6 +39,7 @@ namespace notifies
 
 			if (params[0] == "say"s || params[0] == "say_team"s)
 			{
+				const std::string cmd(params[0]); //ensure params[0] is the same when used later
 				std::string message(game::ConcatArgs(1));
 
 				auto msg_index = 0;
@@ -61,18 +62,18 @@ namespace notifies
 					message.erase(message.begin());
 				}
 
-				scheduler::once([params, message, msg_index, client_num]
+				scheduler::once([cmd, message, msg_index, hidden, client_num]
 				{
 					const scripting::entity level{ *game::levelEntityId };
 					const auto player = scripting::call("getentbynum", { client_num }).as<scripting::entity>();
 					// Remove \x1F before sending the notify only if present
 					const auto notify_msg = msg_index ? message.substr(1) : message;
 
-					scripting::notify(level, params[0], { player, notify_msg });
-					scripting::notify(player, params[0], { notify_msg });
+					scripting::notify(level, cmd, {player, notify_msg, hidden});
+					scripting::notify(player, cmd, {notify_msg, hidden});
 
 					game_log::g_log_printf("%s;%s;%i;%s;%s\n",
-						params[0],
+						cmd.data(),
 						player.call("getguid").as<const char*>(),
 						client_num,
 						player.get("name").as<const char*>(),
@@ -80,11 +81,6 @@ namespace notifies
 					);
 
 				}, scheduler::pipeline::server);
-
-				if (hidden)
-				{
-					return;
-				}
 			}
 
 			// ClientCommand
